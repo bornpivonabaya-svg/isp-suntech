@@ -59,6 +59,8 @@ switch ($action) {
                 $lan[] = preg_replace('~//[^/]+~', '//' . $ip, APP_URL, 1);
             }
         }
+        $loaderUrl = rtrim($serverUrl, '/') . '/index.php?_route=routers/rsc/' . $d['api_token'];
+        $ui->assign('loader_url', $loaderUrl);
         $ui->assign('d', $d);
         $ui->assign('server_url', $serverUrl);
         $ui->assign('lan_urls', $lan);
@@ -66,6 +68,20 @@ switch ($action) {
         $ui->assign('script', RouterScript::routerSetupScript($d, $serverUrl));
         $ui->display('admin/routers/setup.tpl');
         break;
+
+    case 'rsc':
+        $token = preg_replace('~[^a-f0-9]~', '', strtolower($routes['2']));
+        $d = strlen($token) == 32 ? ORM::for_table('tbl_routers')->where('api_token', $token)->find_one() : null;
+        if (!$d) {
+            http_response_code(404);
+            header('Content-Type: text/plain; charset=utf-8');
+            die('# Router not found');
+        }
+        $serverUrl = CaptivePortal::settings()['cp_server_url'];
+        header('Content-Type: text/plain; charset=utf-8');
+        header('Cache-Control: no-store, no-cache, must-revalidate');
+        echo RouterScript::routerSetupScript($d, $serverUrl);
+        die();
 
     case 'setup-status':
         header('Content-Type: application/json');

@@ -384,16 +384,11 @@ class RouterScript
 
         // 5. Download Captive Portal Files directly into suntech/
         $l[] = '# --- 5. Download Captive Portal Files into suntech/ ---';
-        $portalDir = 'suntech';
-        $fileList = ['login.html', 'alogin.html', 'status.html', 'logout.html', 'error.html', 'redirect.html', 'rlogin.html', 'md5.js'];
-        foreach ($fileList as $f) {
-            $fUrl = $serverUrl . '/index.php?_route=captive/file/' . (int) $router['id'] . '/' . $f;
-            $fCheck = (strpos($fUrl, 'https://') === 0) ? ' check-certificate=no' : '';
-            $l[] = ':do { /tool fetch url=' . self::quote($fUrl) . $fCheck . ' dst-path=' . self::quote($portalDir . '/' . $f) . ' } on-error={ }';
-        }
-        $logoUrl = $serverUrl . '/index.php?_route=captive/file/' . (int) $router['id'] . '/logo.png';
-        $logoCheck = (strpos($logoUrl, 'https://') === 0) ? ' check-certificate=no' : '';
-        $l[] = ':do { /tool fetch url=' . self::quote($logoUrl) . $logoCheck . ' dst-path=' . self::quote($portalDir . '/logo.png') . ' } on-error={ }';
+        $l[] = ':local bu ' . self::quote($serverUrl . '/index.php?_route=captive/file/' . (int) $router['id']);
+        $l[] = ':foreach f in={"login.html";"alogin.html";"status.html";"logout.html";"error.html";"redirect.html";"rlogin.html";"md5.js"} do={';
+        $l[] = '    :do { /tool fetch url=($bu . "/" . $f) check-certificate=no dst-path=("suntech/" . $f); :delay 1s } on-error={ }';
+        $l[] = '}';
+        $l[] = ':do { /tool fetch url=($bu . "/logo.png") check-certificate=no dst-path="suntech/logo.png" } on-error={ }';
         $l[] = '';
 
         // 6. Configure Hotspot Profiles to use SunTech Portal
