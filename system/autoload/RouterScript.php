@@ -379,9 +379,29 @@ class RouterScript
         $l[] = ':do { /ip hotspot walled-garden ip remove [find where !dynamic and comment~"SunTech"] } on-error={ }';
         $l[] = ':if ([:len [/ip hotspot walled-garden ip find dst-host=' . self::quote($host) . ']] = 0) do={ /ip hotspot walled-garden ip add dst-host=' . self::quote($host) . ' comment="SunTech Host" disabled=no }';
         $l[] = ':if ([:len [/ip hotspot walled-garden ip find dst-address="62.171.144.87"]] = 0) do={ /ip hotspot walled-garden ip add dst-address="62.171.144.87" comment="SunTech Server IP" disabled=no }';
-        $ipHost = gethostbyname($host);
-        if ($ipHost && $ipHost != $host && $ipHost != '62.171.144.87') {
-            $l[] = ':if ([:len [/ip hotspot walled-garden ip find dst-address=' . self::quote($ipHost) . ']] = 0) do={ /ip hotspot walled-garden ip add dst-address=' . self::quote($ipHost) . ' comment="SunTech Cloudflare IP" disabled=no }';
+        // Anti-Tunneling: Clean up shared CDN IPs from walled-garden ip to prevent tunnel bypass
+        $l[] = ':do { /ip hotspot walled-garden ip remove [find comment="SunTech Cloudflare IP"] } on-error={ }';
+
+        $cp = CaptivePortal::settings();
+        if ($cp['cp_block_dns_tunnel'] == 'yes') {
+            $l[] = '# --- Force Local DNS & Block DNS Tunneling ---';
+            $l[] = ':if ([:len [/ip firewall nat find comment="Force local DNS"]] = 0) do={ /ip firewall nat add chain=dstnat protocol=udp dst-port=53 action=redirect to-ports=53 comment="Force local DNS" place-before=1 }';
+            $l[] = ':if ([:len [/ip firewall nat find comment="Force local DNS (TCP)"]] = 0) do={ /ip firewall nat add chain=dstnat protocol=tcp dst-port=53 action=redirect to-ports=53 comment="Force local DNS (TCP)" place-before=2 }';
+        }
+        if ($cp['cp_block_vpn'] == 'yes' || $cp['cp_block_protocols'] == 'yes') {
+            $l[] = '# --- Block Unauthorized VPN & Bypass Protocols ---';
+            if ($cp['cp_block_dns_tunnel'] == 'yes') {
+                $l[] = ':if ([:len [/ip firewall filter find comment="Block unauthorized external DNS"]] = 0) do={ /ip firewall filter add chain=forward protocol=udp dst-port=53 hotspot=from-client,!auth action=drop comment="Block unauthorized external DNS" place-before=2 }';
+            }
+            if ($cp['cp_block_protocols'] == 'yes') {
+                $l[] = ':if ([:len [/ip firewall filter find comment="Drop unauthenticated UDP VPN tunnels"]] = 0) do={ /ip firewall filter add chain=forward protocol=udp dst-port=!67,68 hotspot=from-client,!auth action=drop comment="Drop unauthenticated UDP VPN tunnels" place-before=3 }';
+                $l[] = ':if ([:len [/ip firewall filter find comment="Block GRE"]] = 0) do={ /ip firewall filter add chain=forward protocol=gre hotspot=from-client,!auth action=drop comment="Block GRE" place-before=4 }';
+            }
+            if ($cp['cp_block_vpn'] == 'yes') {
+                $l[] = ':if ([:len [/ip firewall filter find comment="Block IPsec"]] = 0) do={ /ip firewall filter add chain=forward protocol=ipsec-esp hotspot=from-client,!auth action=drop comment="Block IPsec" place-before=5 }';
+                $l[] = ':if ([:len [/ip firewall filter find comment="Block standard VPN ports"]] = 0) do={ /ip firewall filter add chain=forward protocol=udp dst-port=500,4500,1194,51820 hotspot=from-client,!auth action=drop comment="Block standard VPN ports" place-before=6 }';
+                $l[] = ':if ([:len [/ip firewall filter find comment="Block OpenVPN & PPTP"]] = 0) do={ /ip firewall filter add chain=forward protocol=tcp dst-port=1194,1723 hotspot=from-client,!auth action=drop comment="Block OpenVPN & PPTP" place-before=7 }';
+            }
         }
         $l[] = '';
 

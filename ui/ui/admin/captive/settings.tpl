@@ -40,6 +40,14 @@
                             <label class="checkbox-inline"><input type="checkbox" name="cp_show_plans" value="1" {if $cp['cp_show_plans']=='yes'}checked{/if}> {Lang::T('Package prices')}</label>
                             <label class="checkbox-inline"><input type="checkbox" name="cp_show_buy" value="1" {if $cp['cp_show_buy']=='yes'}checked{/if}> {Lang::T('Buy button')}</label>
                         </div>
+                    <div class="form-group">
+                        <label class="col-md-4 control-label">{Lang::T('Hotspot Security')}</label>
+                        <div class="col-md-8">
+                            <label class="checkbox"><input type="checkbox" name="cp_block_vpn" value="1" {if $cp['cp_block_vpn']=='yes'}checked{/if}> <b>{Lang::T('Block VPN Tunnels')}</b> <small class="text-muted">(Drops WireGuard, OpenVPN, BadVPN, IPsec before login)</small></label>
+                            <label class="checkbox"><input type="checkbox" name="cp_block_dns_tunnel" value="1" {if $cp['cp_block_dns_tunnel']=='yes'}checked{/if}> <b>{Lang::T('Block DNS Tunneling')}</b> <small class="text-muted">(Forces local DNS and drops external port 53 queries)</small></label>
+                            <label class="checkbox"><input type="checkbox" name="cp_block_protocols" value="1" {if $cp['cp_block_protocols']=='yes'}checked{/if}> <b>{Lang::T('Block Unauthorized UDP/GRE')}</b> <small class="text-muted">(Prevents UDP tunnel bypasses before authentication)</small></label>
+                            <label class="checkbox"><input type="checkbox" name="cp_mpesa_pay" value="1" {if $cp['cp_mpesa_pay']=='yes'}checked{/if}> <b>{Lang::T('Direct M-Pesa STK Push')}</b> <small class="text-muted">(Instant 1-tap payment modal on captive portal packages)</small></label>
+                        </div>
                     </div>
                 </div>
             </div>

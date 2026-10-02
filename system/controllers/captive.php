@@ -141,6 +141,107 @@ switch ($action) {
         }
         break;
 
+    case 'stk':
+        $router = captive_router($routes['2']);
+        $plan_id = (int) _post('plan_id');
+        $phone_raw = _post('phone');
+        if (!$router || !$plan_id) {
+            captive_json(['ok' => false, 'message' => 'Invalid router or package selected.'], 400);
+        }
+        $plan = ORM::for_table('tbl_plans')->where('id', $plan_id)->where('enabled', 1)->find_one();
+        if (!$plan) {
+            captive_json(['ok' => false, 'message' => 'Selected package was not found.'], 404);
+        }
+        if (!class_exists('Mpesa') || !Mpesa::isConfigured()) {
+            captive_json(['ok' => false, 'message' => 'M-Pesa STK push is currently not configured on this server.'], 503);
+        }
+        $phone = Mpesa::normalizePhone($phone_raw);
+        if (!$phone) {
+            captive_json(['ok' => false, 'message' => 'Enter a valid Safaricom phone number (e.g. 0712345678).'], 400);
+        }
+        try {
+            // Generate a unique voucher code
+            $code = 'ST' . strtoupper(substr(md5(uniqid((string) mt_rand(), true)), 0, 6));
+
+            $trx = ORM::for_table('tbl_payment_gateway')->create();
+            $trx->username = $code;
+            $trx->user_id = 0;
+            $trx->gateway = 'mpesa';
+            $trx->plan_id = $plan['id'];
+            $trx->plan_name = $plan['name_plan'];
+            $trx->routers_id = $router['id'];
+            $trx->routers = $router['name'];
+            $trx->price = $plan['price'];
+            $trx->payment_method = 'M-Pesa';
+            $trx->payment_channel = $phone;
+            $trx->created_date = date('Y-m-d H:i:s');
+            $trx->expired_date = date('Y-m-d H:i:s', strtotime('+1 hour'));
+            $trx->status = 1; // Unpaid
+
+            $push = Mpesa::stkPush($phone, $plan['price'], Mpesa::config()['account_ref'], $plan['name_plan']);
+            $trx->gateway_trx_id = $push['CheckoutRequestID'] ?? '';
+            $trx->pg_request = json_encode($push);
+            $trx->save();
+
+            captive_json([
+                'ok' => true,
+                'trx_id' => (int) $trx->id(),
+                'code' => $code,
+                'message' => 'M-Pesa prompt sent to ' . $phone . '. Please enter your PIN on your phone.'
+            ]);
+        } catch (Throwable $e) {
+            captive_json(['ok' => false, 'message' => 'M-Pesa error: ' . $e->getMessage()], 500);
+        }
+        break;
+
+    case 'check_stk':
+        $trx_id = (int) _get('trx_id');
+        $trx = ORM::for_table('tbl_payment_gateway')->find_one($trx_id);
+        if (!$trx) {
+            captive_json(['ok' => false, 'message' => 'Transaction not found.'], 404);
+        }
+        if ($trx['status'] == 2) {
+            captive_json([
+                'ok' => true,
+                'paid' => true,
+                'username' => $trx['username'],
+                'password' => $trx['username'],
+                'message' => 'Payment received! Connecting you to internet...'
+            ]);
+        }
+        if (!empty($trx['gateway_trx_id']) && class_exists('Mpesa')) {
+            try {
+                $q = Mpesa::stkQuery($trx['gateway_trx_id']);
+                if ($q['state'] == 'paid') {
+                    $trx->status = 2;
+                    $trx->paid_date = date('Y-m-d H:i:s');
+                    $trx->save();
+
+                    Package::rechargeUser(0, $trx['routers'], $trx['plan_id'], 'M-Pesa', $trx['username']);
+
+                    captive_json([
+                        'ok' => true,
+                        'paid' => true,
+                        'username' => $trx['username'],
+                        'password' => $trx['username'],
+                        'message' => 'Payment received! Connecting you to internet...'
+                    ]);
+                } elseif ($q['state'] == 'failed') {
+                    $trx->status = 3;
+                    $trx->save();
+                    captive_json([
+                        'ok' => false,
+                        'failed' => true,
+                        'message' => Mpesa::resultMessage($q['code'], $q['message'])
+                    ]);
+                }
+            } catch (Throwable $e) {
+                // status pending
+            }
+        }
+        captive_json(['ok' => true, 'paid' => false, 'message' => 'Waiting for M-Pesa PIN...']);
+        break;
+
     case 'file':
         // served to the router's /tool fetch
         $router = captive_router($routes['2']);
@@ -191,7 +292,7 @@ switch ($action) {
         }
         $keys = ['cp_title', 'cp_tagline', 'cp_color', 'cp_color2', 'cp_phone', 'cp_whatsapp', 'cp_notice',
             'cp_server_url', 'cp_dir', 'cp_prefix', 'cp_walled_extra'];
-        $checks = ['cp_show_plans', 'cp_show_voucher', 'cp_show_member', 'cp_show_buy'];
+        $checks = ['cp_show_plans', 'cp_show_voucher', 'cp_show_member', 'cp_show_buy', 'cp_block_vpn', 'cp_block_dns_tunnel', 'cp_block_protocols', 'cp_mpesa_pay'];
         $vals = [];
         foreach ($keys as $k) {
             $vals[$k] = _post($k);

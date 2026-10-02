@@ -28,6 +28,10 @@ class CaptivePortal
             'cp_show_voucher' => 'yes',
             'cp_show_member' => 'yes',
             'cp_show_buy' => 'yes',
+            'cp_block_vpn' => 'yes',
+            'cp_block_dns_tunnel' => 'yes',
+            'cp_block_protocols' => 'yes',
+            'cp_mpesa_pay' => 'yes',
             'cp_server_url' => APP_URL,
             'cp_dir' => 'suntech',
             'cp_prefix' => '',
@@ -116,6 +120,8 @@ class CaptivePortal
             '{{SHOW_VOUCHER}}' => $s['cp_show_voucher'] == 'yes' ? '' : 'hidden',
             '{{SHOW_MEMBER}}' => $s['cp_show_member'] == 'yes' ? '' : 'hidden',
             '{{SHOW_BUY}}' => $s['cp_show_buy'] == 'yes' ? '' : 'hidden',
+            '{{MPESA_PAY}}' => $s['cp_mpesa_pay'] == 'yes' ? 'true' : 'false',
+            '{{PHONE}}' => self::e($s['cp_phone'] ?: ''),
             '{{YEAR}}' => date('Y'),
         ];
         $css = strtr(self::css(), $vars);
@@ -290,33 +296,50 @@ class CaptivePortal
     {
         return <<<'CSS'
 *{box-sizing:border-box}html,body{margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#f2f4f8;color:#1d2433;font-size:15px;line-height:1.45}
-.top{background:linear-gradient(135deg,{{COLOR2}} 0%,{{COLOR2}} 55%,{{COLOR}} 140%);color:#fff;padding:22px 16px 64px;text-align:center}
-.top img{max-height:56px;max-width:180px;background:#fff;border-radius:12px;padding:6px 10px}
-.top h1{margin:10px 0 2px;font-size:22px;letter-spacing:.2px}.top p{margin:0;opacity:.85;font-size:14px}
-.wrap{max-width:440px;margin:-46px auto 0;padding:0 14px 24px}
-.card{background:#fff;border-radius:16px;box-shadow:0 6px 24px rgba(16,42,84,.12);padding:18px;margin-bottom:14px}
-.card h2{font-size:16px;margin:0 0 12px}
-.tabs{display:flex;background:#eef1f6;border-radius:10px;padding:4px;margin-bottom:14px}
-.tabs button{flex:1;border:0;background:transparent;padding:9px;border-radius:8px;font-weight:600;color:#5b6577;cursor:pointer;font-size:14px}
-.tabs button.on{background:#fff;color:{{COLOR2}};box-shadow:0 1px 3px rgba(0,0,0,.08)}
-label{display:block;font-size:13px;color:#5b6577;margin:0 0 4px}
-input[type=text],input[type=password]{width:100%;padding:12px 14px;border:1.5px solid #d7dce5;border-radius:10px;font-size:16px;margin-bottom:12px;outline:none}
-input:focus{border-color:{{COLOR}}}
-.btn{display:block;width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none}
-.btn-main{background:{{COLOR}};color:#fff}.btn-main:disabled{opacity:.6}
-.btn-alt{background:#fff;color:{{COLOR2}};border:1.5px solid {{COLOR2}};margin-top:10px}
-.alert{background:#fdecea;color:#a12622;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:14px}
-.ok{background:#e7f6ec;color:#1d6b3a}
-.notice{background:#fff7e6;border-left:4px solid {{COLOR}};padding:10px 12px;border-radius:8px;margin-bottom:14px;font-size:14px}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#f0f3f8;color:#1e293b;font-size:15px;line-height:1.45}
+.top{background:linear-gradient(135deg,{{COLOR2}} 0%,{{COLOR2}} 60%,{{COLOR}} 140%);color:#fff;padding:26px 16px 58px;text-align:center;position:relative}
+.top-brand{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);padding:6px 14px;border-radius:24px;backdrop-filter:blur(6px);margin-bottom:8px}
+.top img{max-height:42px;max-width:140px;object-fit:contain}
+.top h1{margin:6px 0 2px;font-size:22px;font-weight:800;letter-spacing:-.3px}.top p{margin:0;opacity:.9;font-size:13px}
+.status-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(16,185,129,.2);border:1px solid rgba(16,185,129,.4);color:#6ee7b7;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-top:6px}
+.status-dot{width:7px;height:7px;border-radius:50%;background:#10b981;box-shadow:0 0 8px #10b981}
+.wrap{max-width:440px;margin:-38px auto 0;padding:0 14px 28px;position:relative;z-index:10}
+.card{background:#fff;border-radius:20px;box-shadow:0 8px 30px rgba(15,31,61,.1);padding:18px;margin-bottom:14px;border:1px solid #e9edf3}
+.tabs{display:flex;background:#f1f4f9;border-radius:12px;padding:4px;margin-bottom:16px;gap:4px}
+.tabs button{flex:1;border:0;background:transparent;padding:10px 6px;border-radius:9px;font-weight:700;color:#64748b;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;gap:5px;transition:all .2s}
+.tabs button.on{background:#fff;color:{{COLOR2}};box-shadow:0 2px 6px rgba(0,0,0,.08)}
+label{display:block;font-size:12px;font-weight:700;color:#475569;margin:0 0 5px;text-transform:uppercase;letter-spacing:.3px}
+input[type=text],input[type=password],input[type=tel]{width:100%;padding:12px 14px;border:1.5px solid #cbd5e1;border-radius:11px;font-size:15px;margin-bottom:14px;outline:none;background:#f8fafc;color:#0f172a;transition:border-color .2s}
+input:focus{border-color:{{COLOR}};background:#fff;box-shadow:0 0 0 3px rgba(245,140,20,.15)}
+.btn{display:block;width:100%;border:0;border-radius:12px;padding:13px 16px;font-size:15px;font-weight:800;cursor:pointer;text-align:center;text-decoration:none;transition:all .2s;box-sizing:border-box}
+.btn-main{background:{{COLOR}};color:#fff;box-shadow:0 4px 14px rgba(245,140,20,.35)}.btn-main:active{transform:scale(.98)}.btn-main:disabled{opacity:.6}
+.btn-mpesa{background:#16a34a;color:#fff;box-shadow:0 4px 14px rgba(22,163,74,.3)}.btn-mpesa:hover{background:#15803d}
+.btn-alt{background:#f1f5f9;color:{{COLOR2}};border:1px solid #cbd5e1;margin-top:10px}
+.btn-reconnect{background:#eff6ff;color:#1d4ed8;border:1.5px dashed #93c5fd;padding:11px;border-radius:11px;font-size:13px;font-weight:700;margin-bottom:14px}
+.btn-reconnect:hover{background:#dbeafe}
+.alert{background:#fef2f2;color:#991b1b;border:1px solid #fecaca;border-radius:11px;padding:10px 14px;margin-bottom:14px;font-size:13.5px;font-weight:600}
+.ok{background:#f0fdf4;color:#166534;border-color:#bbf7d0}
+.notice{background:#fffbeb;border-left:4px solid {{COLOR}};padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:13px;color:#92400e}
 .plans{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.plan{border:1.5px solid #e3e7ee;border-radius:12px;padding:12px;text-align:center;text-decoration:none;color:inherit;display:block}
-.plan:hover{border-color:{{COLOR}}}
-.plan b{display:block;font-size:14px;margin-bottom:4px}.plan .price{color:{{COLOR}};font-size:18px;font-weight:800}
-.plan small{color:#7a8396;display:block;margin-top:2px}
-.muted{color:#7a8396;font-size:13px;text-align:center}
-.foot{text-align:center;color:#7a8396;font-size:13px;margin-top:6px}.foot a{color:{{COLOR2}};text-decoration:none;font-weight:600}
-table.st{width:100%;border-collapse:collapse}table.st td{padding:9px 4px;border-bottom:1px solid #eef1f6}table.st td:last-child{text-align:right;font-weight:600}
+.plan{border:1.5px solid #e2e8f0;border-radius:14px;padding:12px 10px;text-align:center;text-decoration:none;color:inherit;display:flex;flex-direction:column;justify-content:space-between;background:#fff;transition:all .2s;cursor:pointer;position:relative}
+.plan:hover{border-color:{{COLOR}};transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,.06)}
+.plan b{display:block;font-size:13.5px;font-weight:800;color:#0f172a;margin-bottom:2px}
+.plan .price{color:{{COLOR}};font-size:17px;font-weight:900;margin:4px 0}
+.plan .limit{display:inline-block;font-size:11px;font-weight:700;color:#16a34a;background:#dcfce7;padding:2px 8px;border-radius:10px;margin-top:2px}
+.plan .time{font-size:11px;color:#64748b;margin-top:2px}
+.plan .btn-buy{background:#16a34a;color:#fff;border-radius:8px;padding:5px 8px;font-size:12px;font-weight:700;margin-top:8px;border:0}
+.muted{color:#64748b;font-size:12.5px;text-align:center}
+.foot{text-align:center;color:#64748b;font-size:12.5px;margin-top:12px}.foot a{color:{{COLOR2}};text-decoration:none;font-weight:700}
+.support-bar{display:flex;align-items:center;justify-content:space-between;background:{{COLOR2}};color:#fff;border-radius:12px;padding:10px 14px;margin-top:10px;font-size:12.5px;font-weight:600}
+.support-bar a{color:#fde047;text-decoration:none;font-weight:800}
+.modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.6);backdrop-filter:blur(4px);z-index:99;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+.modal-overlay.open{opacity:1;pointer-events:auto}
+.sheet{background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:440px;padding:22px 20px 32px;box-shadow:0 -10px 40px rgba(0,0,0,.2);transform:translateY(100%);transition:transform .3s cubic-bezier(.16,1,.3,1)}
+.modal-overlay.open .sheet{transform:translateY(0)}
+.sheet-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.sheet-header h3{margin:0;font-size:18px;font-weight:800;color:#0f172a}
+.sheet-close{border:0;background:#f1f5f9;border-radius:50%;width:30px;height:30px;cursor:pointer;font-weight:700;color:#475569}
+.pkg-pill{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
 .hidden{display:none!important}
 .spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.5);border-top-color:#fff;border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px;margin-right:6px}
 @keyframes s{to{transform:rotate(360deg)}}
@@ -332,7 +355,11 @@ CSS;
 <title>' . $title . ' - {{TITLE}}</title>' . $extra . '
 <style>{{CSS}}</style>
 </head><body>
-<div class="top"><img src="logo.png" alt="" onerror="this.style.display=\'none\'"><h1>{{TITLE}}</h1><p>{{TAGLINE}}</p></div>
+<div class="top">
+  <div class="top-brand"><img src="logo.png" alt="" onerror="this.style.display=\'none\'"><span>{{TITLE}}</span></div>
+  <p>{{TAGLINE}}</p>
+  <div class="status-pill"><span class="status-dot"></span> Wi-Fi Hotspot Online</div>
+</div>
 <div class="wrap">
 ';
     }
@@ -353,62 +380,121 @@ $(if chap-id)<script src="md5.js"></script>$(endif)') . <<<'HTML'
 {{NOTICE}}
 $(if error)<div class="alert">$(error)</div>$(endif)
 <div class="alert hidden" id="msg"></div>
+
 <div class="card">
   <div class="tabs" id="tabs">
-    <button type="button" class="on {{SHOW_VOUCHER}}" data-tab="voucher">Voucher</button>
-    <button type="button" class="{{SHOW_MEMBER}}" data-tab="member">Account</button>
+    <button type="button" class="on {{SHOW_PLANS}}" data-tab="plans">⚡ Packages</button>
+    <button type="button" class="{{SHOW_VOUCHER}}" data-tab="voucher">🎫 Voucher</button>
+    <button type="button" class="{{SHOW_MEMBER}}" data-tab="member">👤 Account</button>
   </div>
-  <form id="f-voucher" class="{{SHOW_VOUCHER}}" onsubmit="return voucherLogin()">
-    <label for="code">Voucher code</label>
-    <input type="text" id="code" autocomplete="off" autocapitalize="characters" placeholder="Enter your voucher" required>
-    <button class="btn btn-main" id="b-voucher" type="submit">Connect</button>
-  </form>
-  <form id="f-member" class="hidden" onsubmit="return memberLogin()">
-    <label for="user">Username</label>
-    <input type="text" id="user" autocomplete="username" autocapitalize="off" value="$(username)" required>
-    <label for="pass">Password</label>
-    <input type="password" id="pass" autocomplete="current-password" required>
-    <button class="btn btn-main" type="submit">Login</button>
-  </form>
-  $(if trial == 'yes')<a class="btn btn-alt" href="$(link-login-only)?dst=$(link-orig-esc)&amp;username=T-$(mac-esc)">Free trial</a>$(endif)
-  <a class="btn btn-alt {{SHOW_BUY}}" id="buy" href="#">Buy a package</a>
+
+  <!-- PANE 1: PACKAGES -->
+  <div id="pane-plans" class="{{SHOW_PLANS}}">
+    <div class="plans" id="plans">
+      <div style="grid-column:1/-1;text-align:center;padding:16px 0;color:#94a3b8"><span class="spin"></span> Loading Wi-Fi packages...</div>
+    </div>
+    <p class="muted" style="margin:12px 0 0">Tap a package to pay via M-Pesa &amp; connect instantly.</p>
+  </div>
+
+  <!-- PANE 2: VOUCHER -->
+  <div id="pane-voucher" class="hidden">
+    <div id="rec-box" class="hidden">
+      <button type="button" class="btn btn-reconnect" id="btn-reconnect" onclick="reconnectVoucher()">⚡ Reconnect Active Voucher (<span id="rec-code"></span>)</button>
+    </div>
+    <form id="f-voucher" onsubmit="return voucherLogin()">
+      <label for="code">Voucher Code</label>
+      <input type="text" id="code" autocomplete="off" autocapitalize="characters" placeholder="e.g. ST8932" style="font-size:18px;letter-spacing:2px;font-weight:700;text-transform:uppercase" required>
+      <button class="btn btn-main" id="b-voucher" type="submit">Connect to Internet</button>
+    </form>
+    <div style="text-align:center;margin-top:12px">
+      <span class="muted">Don't have a voucher? <a href="#" onclick="showTab('plans');return false" style="color:{{COLOR}};font-weight:700">Buy Package &rarr;</a></span>
+    </div>
+  </div>
+
+  <!-- PANE 3: ACCOUNT -->
+  <div id="pane-member" class="hidden">
+    <form id="f-member" onsubmit="return memberLogin()">
+      <label for="user">Username or Phone</label>
+      <input type="text" id="user" autocomplete="username" autocapitalize="off" value="$(username)" placeholder="07xx xxx xxx" required>
+      <label for="pass">Password</label>
+      <input type="password" id="pass" autocomplete="current-password" placeholder="••••••••" required>
+      <button class="btn btn-main" type="submit">Login to Account</button>
+    </form>
+  </div>
+
+  $(if trial == 'yes')<a class="btn btn-alt" href="$(link-login-only)?dst=$(link-orig-esc)&amp;username=T-$(mac-esc)">Free Trial Access</a>$(endif)
 </div>
-<div class="card hidden" id="plans-card">
-  <h2>Packages</h2>
-  <div class="plans" id="plans"></div>
-  <p class="muted" style="margin:10px 0 0">Tap a package to pay and get connected.</p>
+
+<!-- SUPPORT BAR -->
+<div class="support-bar" id="support-bar" style="{{PHONE}}">
+  <span>📞 Customer Support</span>
+  <a href="tel:{{PHONE}}">{{PHONE}}</a>
 </div>
+
+<!-- M-PESA STK MODAL -->
+<div class="modal-overlay" id="stk-modal">
+  <div class="sheet">
+    <div class="sheet-header">
+      <h3>Pay via M-Pesa</h3>
+      <button type="button" class="sheet-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="pkg-pill">
+      <div>
+        <b id="m-name" style="font-size:15px;color:#0f172a">Package</b>
+        <div id="m-validity" style="font-size:12px;color:#64748b">1 Day</div>
+      </div>
+      <div id="m-price" style="font-size:18px;font-weight:900;color:#16a34a">KES 0</div>
+    </div>
+    <form onsubmit="return submitStk();">
+      <label for="stk-phone">M-Pesa Phone Number</label>
+      <input type="tel" id="stk-phone" placeholder="0712 345 678" style="font-size:16px;font-weight:700" required>
+      <div id="stk-msg" class="alert hidden" style="margin-top:4px"></div>
+      <button class="btn btn-mpesa" id="b-stk" type="submit">Pay with M-Pesa</button>
+      <button type="button" class="btn btn-alt" style="margin-top:8px" onclick="closeModal()">Cancel</button>
+    </form>
+  </div>
+</div>
+
 <form name="sendin" action="$(link-login-only)" method="post" class="hidden">
   <input type="hidden" name="username"><input type="hidden" name="password">
   <input type="hidden" name="dst" value="$(link-orig)"><input type="hidden" name="popup" value="true">
 </form>
+
 <script>
 var CP = {
   server: '{{SERVER}}', router: '{{ROUTER_ID}}', showPlans: {{SHOW_PLANS}},
   mac: '$(mac)', ip: '$(ip)', chapId: '$(chap-id)', chapChallenge: '$(chap-challenge)'
 };
+var activePlanId = null;
+var pollTimer = null;
+
 function api(route) { return CP.server + '/index.php?_route=' + route; }
-function portalUrl(route) {
-  return api(route) + '&nux-mac=' + encodeURIComponent(CP.mac) + '&nux-ip=' + encodeURIComponent(CP.ip) + '&nux-router=' + CP.router;
-}
 function say(text, good) {
   var m = document.getElementById('msg');
   m.textContent = text; m.className = 'alert' + (good ? ' ok' : '');
 }
+function sayStk(text, good) {
+  var m = document.getElementById('stk-msg');
+  m.textContent = text; m.className = 'alert' + (good ? ' ok' : '');
+}
+
 function routerLogin(user, pass) {
+  try { localStorage.setItem('cp_saved_voucher', user); } catch(e){}
   var f = document.sendin;
   f.username.value = user;
   f.password.value = (CP.chapId && window.hexMD5) ? hexMD5(CP.chapId + pass + CP.chapChallenge) : pass;
   f.submit();
   return false;
 }
+
 function memberLogin() {
   return routerLogin(document.getElementById('user').value.trim(), document.getElementById('pass').value);
 }
+
 function voucherLogin() {
   var code = document.getElementById('code').value.trim(), b = document.getElementById('b-voucher');
   if (!code) return false;
-  b.disabled = true; b.innerHTML = '<span class="spin"></span>Checking...';
+  b.disabled = true; b.innerHTML = '<span class="spin"></span>Connecting...';
   var body = 'code=' + encodeURIComponent(code) + '&mac=' + encodeURIComponent(CP.mac) + '&ip=' + encodeURIComponent(CP.ip);
   var x = new XMLHttpRequest();
   x.open('POST', api('captive/voucher/' + CP.router));
@@ -417,24 +503,121 @@ function voucherLogin() {
   x.onload = function () {
     var r = {};
     try { r = JSON.parse(x.responseText); } catch (e) {}
-    if (r.ok) { say(r.message || 'Voucher accepted, connecting...', true); routerLogin(r.username, r.password); }
-    else { say(r.message || 'Voucher not accepted'); b.disabled = false; b.textContent = 'Connect'; }
+    if (r.ok) { say(r.message || 'Connected successfully!', true); routerLogin(r.username, r.password); }
+    else { say(r.message || 'Voucher not accepted'); b.disabled = false; b.textContent = 'Connect to Internet'; }
   };
-  // billing server unreachable: the voucher may already be active on the router
   x.onerror = x.ontimeout = function () { routerLogin(code, code); };
   x.send(body);
   return false;
 }
+
+function reconnectVoucher() {
+  var c = localStorage.getItem('cp_saved_voucher');
+  if (c) { document.getElementById('code').value = c; voucherLogin(); }
+}
+
+function showTab(name) {
+  var tabs = document.querySelectorAll('#tabs button');
+  for (var i = 0; i < tabs.length; i++) {
+    tabs[i].className = tabs[i].getAttribute('data-tab') === name ? 'on' : '';
+  }
+  document.getElementById('pane-plans').className = name === 'plans' ? '' : 'hidden';
+  document.getElementById('pane-voucher').className = name === 'voucher' ? '' : 'hidden';
+  document.getElementById('pane-member').className = name === 'member' ? '' : 'hidden';
+}
+
 var tabs = document.querySelectorAll('#tabs button');
-for (var i = 0; i < tabs.length; i++) tabs[i].onclick = function () {
-  for (var j = 0; j < tabs.length; j++) tabs[j].className = tabs[j].className.replace(/\bon\b/, '').trim();
-  this.className += ' on';
-  document.getElementById('f-voucher').className = this.getAttribute('data-tab') == 'voucher' ? '' : 'hidden';
-  document.getElementById('f-member').className = this.getAttribute('data-tab') == 'member' ? '' : 'hidden';
-};
-if (tabs[0].className.indexOf('hidden') >= 0 && tabs[1]) tabs[1].onclick();
-document.getElementById('buy').href = portalUrl('login');
-function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+for (var i = 0; i < tabs.length; i++) {
+  tabs[i].onclick = function () { showTab(this.getAttribute('data-tab')); };
+}
+
+function openBuy(id, name, validity, price) {
+  activePlanId = id;
+  document.getElementById('m-name').textContent = name;
+  document.getElementById('m-validity').textContent = validity;
+  document.getElementById('m-price').textContent = price;
+  var b = document.getElementById('b-stk');
+  b.disabled = false; b.textContent = 'Pay ' + price + ' with M-Pesa';
+  document.getElementById('stk-msg').className = 'alert hidden';
+  try {
+    var savedPhone = localStorage.getItem('cp_phone');
+    if (savedPhone) document.getElementById('stk-phone').value = savedPhone;
+  } catch(e){}
+  document.getElementById('stk-modal').className = 'modal-overlay open';
+}
+
+function closeModal() {
+  if (pollTimer) clearInterval(pollTimer);
+  document.getElementById('stk-modal').className = 'modal-overlay';
+}
+
+function submitStk() {
+  var phone = document.getElementById('stk-phone').value.trim();
+  var b = document.getElementById('b-stk');
+  if (!phone) return false;
+  try { localStorage.setItem('cp_phone', phone); } catch(e){}
+  b.disabled = true; b.innerHTML = '<span class="spin"></span>Sending M-Pesa prompt...';
+  sayStk('Sending prompt to ' + phone + '...', true);
+
+  var x = new XMLHttpRequest();
+  x.open('POST', api('captive/stk/' + CP.router));
+  x.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+  x.onload = function() {
+    var r = {};
+    try { r = JSON.parse(x.responseText); } catch(e){}
+    if (r.ok) {
+      sayStk(r.message || 'Check your phone and enter your M-Pesa PIN', true);
+      b.innerHTML = '<span class="spin"></span>Waiting for PIN...';
+      startPolling(r.trx_id);
+    } else {
+      sayStk(r.message || 'M-Pesa prompt failed, please try again.');
+      b.disabled = false; b.textContent = 'Try Again';
+    }
+  };
+  x.onerror = function() {
+    sayStk('Could not reach payment server. Check Wi-Fi connection.');
+    b.disabled = false; b.textContent = 'Retry';
+  };
+  x.send('plan_id=' + encodeURIComponent(activePlanId) + '&phone=' + encodeURIComponent(phone));
+  return false;
+}
+
+function startPolling(trxId) {
+  if (pollTimer) clearInterval(pollTimer);
+  var attempts = 0;
+  pollTimer = setInterval(function() {
+    attempts++;
+    if (attempts > 30) {
+      clearInterval(pollTimer);
+      sayStk('Payment timeout. If you received an M-Pesa SMS, enter your code in the Voucher tab.');
+      document.getElementById('b-stk').disabled = false;
+      document.getElementById('b-stk').textContent = 'Retry';
+      return;
+    }
+    var q = new XMLHttpRequest();
+    q.open('GET', api('captive/check_stk/' + CP.router + '&trx_id=' + trxId));
+    q.onload = function() {
+      var res = {};
+      try { res = JSON.parse(q.responseText); } catch(e){}
+      if (res.paid) {
+        clearInterval(pollTimer);
+        sayStk(res.message || 'Payment received! Connecting...', true);
+        setTimeout(function() {
+          closeModal();
+          routerLogin(res.username, res.password);
+        }, 1200);
+      } else if (res.failed) {
+        clearInterval(pollTimer);
+        sayStk(res.message || 'Payment was cancelled or failed.');
+        document.getElementById('b-stk').disabled = false;
+        document.getElementById('b-stk').textContent = 'Retry';
+      }
+    };
+    q.send();
+  }, 2500);
+}
+
+// Auto-populate plans
 if (CP.showPlans) {
   var p = new XMLHttpRequest();
   p.open('GET', api('captive/plans/' + CP.router));
@@ -442,18 +625,35 @@ if (CP.showPlans) {
   p.onload = function () {
     var r = {};
     try { r = JSON.parse(p.responseText); } catch (e) { return; }
-    if (!r.plans || !r.plans.length) return;
+    if (!r.plans || !r.plans.length) {
+      document.getElementById('plans').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:12px;color:#94a3b8">No packages currently available.</div>';
+      return;
+    }
     var h = '';
     for (var i = 0; i < r.plans.length; i++) {
       var pl = r.plans[i];
-      h += '<a class="plan" href="' + esc(portalUrl('login')) + '"><b>' + esc(pl.name) + '</b><span class="price">' + esc(pl.price) +
-        '</span><small>' + esc(pl.validity) + '</small>' + (pl.limit ? '<small>' + esc(pl.limit) + '</small>' : '') + '</a>';
+      h += '<div class="plan" onclick="openBuy(' + pl.id + ',\'' + esc(pl.name) + '\',\'' + esc(pl.validity) + '\',\'' + esc(pl.price) + '\')">' +
+        '<div><b>' + esc(pl.name) + '</b><span class="time">' + esc(pl.validity) + '</span></div>' +
+        '<div class="price">' + esc(pl.price) + '</div>' +
+        (pl.limit ? '<span class="limit">' + esc(pl.limit) + '</span>' : '') +
+        '<button type="button" class="btn-buy">⚡ Buy Package</button>' +
+        '</div>';
     }
     document.getElementById('plans').innerHTML = h;
-    document.getElementById('plans-card').className = 'card';
   };
   p.send();
 }
+
+function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+
+// Check for saved voucher
+try {
+  var saved = localStorage.getItem('cp_saved_voucher');
+  if (saved) {
+    document.getElementById('rec-code').textContent = saved;
+    document.getElementById('rec-box').className = '';
+  }
+} catch(e){}
 </script>
 HTML
                     . self::foot();
