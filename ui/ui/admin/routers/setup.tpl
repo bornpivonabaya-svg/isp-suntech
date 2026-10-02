@@ -24,14 +24,19 @@
                     </div>
                 {/if}
                 <div class="alert alert-success" style="background:#eafaf1; border:1px solid #2ecc71; color:#1e8449; border-radius:6px; padding:15px; margin-bottom:20px;">
-                    <h4 style="margin-top:0; font-weight:bold;"><i class="fa fa-shield"></i> 1-Click Encrypted Setup (Recommended)</h4>
-                    <p style="margin-bottom:10px; font-size:13px;">Copy and paste this single command into <b>Winbox &gt; New Terminal</b>. It securely downloads the encrypted configuration over HTTPS and installs everything cleanly without terminal buffer drops:</p>
+                    <h4 style="margin-top:0; font-weight:bold;"><i class="fa fa-flash"></i> 1-Click Router Setup (Recommended)</h4>
+                    <p style="margin-bottom:10px; font-size:13px;">Paste into <b>Winbox &gt; New Terminal</b> (or SSH). Downloads and installs the complete configuration (API, Hotspot, Walled Garden &amp; Captive Portal) cleanly without terminal crashes:</p>
                     <div class="input-group">
-                        <input type="text" id="loaderCmd" class="form-control" readonly value="/tool fetch url=&quot;{$loader_url}&quot; check-certificate=no dst-path=&quot;suntech.rsc&quot;; :delay 1s; /import suntech.rsc; /file remove suntech.rsc" style="font-family: monospace; font-size:12px; font-weight: bold; background: #fff; color: #222;">
+                        <input type="text" id="loaderCmd" class="form-control" readonly value="/tool fetch url=&quot;{$loader_url}&quot; dst-path=&quot;suntech.rsc&quot;; :delay 2s; /import suntech.rsc; /file remove suntech.rsc" style="font-family: monospace; font-size:12px; font-weight: bold; background: #fff; color: #222;">
                         <span class="input-group-btn">
                             <button class="btn btn-success" type="button" onclick="copyLoader(this)"><i class="fa fa-copy"></i> {Lang::T('Copy Command')}</button>
                         </span>
                     </div>
+                    <p style="margin-top:8px; margin-bottom:0; font-size:11px; color:#555;">
+                        <i class="fa fa-info-circle"></i> <i>For low-memory routers (hAP lite / RouterOS v6), you can also run in 2 steps:</i><br>
+                        <code>/tool fetch url="{$loader_url}" dst-path="suntech.rsc"</code><br>
+                        <code>/import suntech.rsc; /file remove suntech.rsc</code>
+                    </p>
                 </div>
 
                 <details style="margin-bottom:15px">

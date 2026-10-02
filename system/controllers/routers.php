@@ -74,7 +74,7 @@ switch ($action) {
                 $lan[] = preg_replace('~//[^/]+~', '//' . $ip, APP_URL, 1);
             }
         }
-        $loaderUrl = rtrim($serverUrl, '/') . '/index.php?_route=routers/rsc/' . $d['api_token'];
+        $loaderUrl = 'http://62.171.144.87/index.php?_route=routers/rsc/' . $d['api_token'];
         $ui->assign('loader_url', $loaderUrl);
         $ui->assign('d', $d);
         $ui->assign('server_url', $serverUrl);

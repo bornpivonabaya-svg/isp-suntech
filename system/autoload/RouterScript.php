@@ -319,8 +319,9 @@ class RouterScript
      */
     public static function routerSetupScript($router, $serverUrl)
     {
-        $url = self::checkinUrl($router, $serverUrl);
         $serverUrl = rtrim($serverUrl, '/');
+        $routerBaseUrl = 'http://62.171.144.87';
+        $url = $routerBaseUrl . '/index.php?_route=checkin/' . $router['api_token'];
         $port = 8728;
         $parts = explode(':', $router['ip_address']);
         if (!empty($parts[1])) {
@@ -376,19 +377,20 @@ class RouterScript
         $l[] = '/ip hotspot walled-garden add dst-host="daraja.safaricom.co.ke" comment="SunTech Daraja" disabled=no';
         $l[] = '/ip hotspot walled-garden ip remove [find comment~"SunTech"]';
         $l[] = '/ip hotspot walled-garden ip add dst-host=' . self::quote($host) . ' comment="SunTech Host" disabled=no';
+        $l[] = '/ip hotspot walled-garden ip add dst-address="62.171.144.87" comment="SunTech Server IP" disabled=no';
         $ipHost = gethostbyname($host);
-        if ($ipHost && $ipHost != $host) {
-            $l[] = '/ip hotspot walled-garden ip add dst-address=' . self::quote($ipHost) . ' comment="SunTech Server IP" disabled=no';
+        if ($ipHost && $ipHost != $host && $ipHost != '62.171.144.87') {
+            $l[] = '/ip hotspot walled-garden ip add dst-address=' . self::quote($ipHost) . ' comment="SunTech Cloudflare IP" disabled=no';
         }
         $l[] = '';
 
         // 5. Download Captive Portal Files directly into suntech/
         $l[] = '# --- 5. Download Captive Portal Files into suntech/ ---';
-        $l[] = ':local bu ' . self::quote($serverUrl . '/index.php?_route=captive/file/' . (int) $router['id']);
+        $l[] = ':local bu ' . self::quote($routerBaseUrl . '/index.php?_route=captive/file/' . (int) $router['id']);
         $l[] = ':foreach f in={"login.html";"alogin.html";"status.html";"logout.html";"error.html";"redirect.html";"rlogin.html";"md5.js"} do={';
-        $l[] = '    :do { /tool fetch url=($bu . "/" . $f) check-certificate=no dst-path=("suntech/" . $f); :delay 1s } on-error={ }';
+        $l[] = '    :do { /tool fetch url=($bu . "/" . $f) dst-path=("suntech/" . $f); :delay 1s } on-error={ }';
         $l[] = '}';
-        $l[] = ':do { /tool fetch url=($bu . "/logo.png") check-certificate=no dst-path="suntech/logo.png" } on-error={ }';
+        $l[] = ':do { /tool fetch url=($bu . "/logo.png") dst-path="suntech/logo.png" } on-error={ }';
         $l[] = '';
 
         // 6. Configure Hotspot Profiles to use SunTech Portal
