@@ -8,6 +8,37 @@
                 <div class="panel-heading">{Lang::T('Portal Appearance')}</div>
                 <div class="panel-body">
                     <div class="form-group">
+                        <label class="col-md-4 control-label"><b>{Lang::T('Active Theme')}</b></label>
+                        <div class="col-md-8">
+                            <select class="form-control" name="cp_theme" id="cpTheme">
+                                {foreach $themes as $tid => $thm}
+                                    <option value="{$tid}" {if $cp['cp_theme'] == $tid}selected{/if} data-color="{$thm['color']}" data-color2="{$thm['color2']}">
+                                        {$thm['name']} ({$thm['category']})
+                                    </option>
+                                {/foreach}
+                            </select>
+                            <p class="help-block"><small class="text-muted">{Lang::T('Select any theme from the SunTech catalog. The live phone preview updates instantly.')}</small></p>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-md-12">
+                            <div class="row" style="margin-left:-4px;margin-right:-4px;max-height:220px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:10px;padding:8px;background:#f8fafc;">
+                                {foreach $themes as $tid => $thm}
+                                <div class="col-xs-6 col-sm-4" style="padding:3px">
+                                    <div class="theme-card {if $cp['cp_theme'] == $tid}active{/if}" data-theme="{$tid}" style="border:2px solid {if $cp['cp_theme'] == $tid}#0284c7{else}#cbd5e1{/if};border-radius:8px;padding:7px;background:#fff;cursor:pointer;min-height:85px;position:relative;transition:all .15s">
+                                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+                                            <span style="display:inline-block;width:13px;height:13px;border-radius:50%;background:{$thm['color']};border:1px solid rgba(0,0,0,0.1)"></span>
+                                            <span class="badge" style="font-size:9px;background:{if $thm['appearance']=='dark'}#1e293b{else}#e2e8f0{/if};color:{if $thm['appearance']=='dark'}#fff{else}#334155{/if}">{$thm['appearance']}</span>
+                                        </div>
+                                        <b style="font-size:11px;display:block;line-height:1.2;color:#0f172a">{$thm['name']}</b>
+                                        <small style="font-size:9.5px;color:#64748b;display:block;margin-top:2px;line-height:1.2">{$thm['category']}</small>
+                                    </div>
+                                </div>
+                                {/foreach}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
                         <label class="col-md-4 control-label">{Lang::T('Title')}</label>
                         <div class="col-md-8"><input type="text" class="form-control" name="cp_title" value="{$cp['cp_title']|escape}"></div>
                     </div>
@@ -159,9 +190,11 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
     function rid() { return $('#cpRouter').val() || 0; }
+    function currentTheme() { return $('#cpTheme').val() || 'suntech-blue'; }
     function pvUrl() {
         var o = $('#pvPage option:selected');
-        return cpBase + 'preview/' + rid() + '/' + o.val() + (o.data('error') ? cpQs + 'error=1' : '') + (o.data('trial') ? cpQs + 'trial=1' : '');
+        var theme = currentTheme();
+        return cpBase + 'preview/' + rid() + '/' + o.val() + cpQs + 'theme=' + encodeURIComponent(theme) + (o.data('error') ? '&error=1' : '') + (o.data('trial') ? '&trial=1' : '');
     }
     function refreshLinks() {
         var u = pvUrl();
@@ -170,7 +203,16 @@
         $('#cpZip').attr('href', cpBase + 'download/' + rid());
         $('#cpScript').attr('href', cpBase + 'script/' + rid() + cpQs + 'all=' + all);
     }
-    $('#pvPage, #cpRouter, #cpAll').on('change input', refreshLinks);
+    $('#pvPage, #cpRouter, #cpAll, #cpTheme').on('change input', refreshLinks);
+    $('.theme-card').on('click', function() {
+        var t = $(this).data('theme');
+        $('#cpTheme').val(t).trigger('change');
+        $('.theme-card').css('border-color', '#cbd5e1').removeClass('active');
+        $(this).css('border-color', '#0284c7').addClass('active');
+        var opt = $('#cpTheme option:selected');
+        if (opt.data('color')) $('[name=cp_color]').val(opt.data('color'));
+        if (opt.data('color2')) $('[name=cp_color2]').val(opt.data('color2'));
+    });
     $('#cpPush').on('click', function (e) {
         e.preventDefault();
         if (!confirm('Install the captive portal on this router now?')) return;

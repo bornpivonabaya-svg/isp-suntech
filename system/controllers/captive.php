@@ -245,7 +245,8 @@ switch ($action) {
     case 'file':
         // served to the router's /tool fetch
         $router = captive_router($routes['2']);
-        $files = $router ? CaptivePortal::files($router) : [];
+        $theme = _get('theme');
+        $files = $router ? CaptivePortal::files($router, $theme) : [];
         $name = $routes['3'];
         if (!isset($files[$name])) {
             http_response_code(404);
@@ -268,6 +269,7 @@ switch ($action) {
         $ui->assign('_admin', $admin);
         $routers = ORM::for_table('tbl_routers')->where('enabled', 1)->order_by_asc('name')->find_array();
         $ui->assign('routers', $routers);
+        $ui->assign('themes', CaptivePortal::$themes);
         $ui->assign('cp', CaptivePortal::settings());
         $ui->assign('local_only', CaptivePortal::serverUrlIsLocalOnly());
         // suggest LAN addresses of this PC so a real router can reach it
@@ -290,7 +292,7 @@ switch ($action) {
         if (!Csrf::check(_post('csrf_token'))) {
             r2(getUrl('captive'), 'e', Lang::T('Invalid or Expired CSRF Token'));
         }
-        $keys = ['cp_title', 'cp_tagline', 'cp_color', 'cp_color2', 'cp_phone', 'cp_whatsapp', 'cp_notice',
+        $keys = ['cp_theme', 'cp_title', 'cp_tagline', 'cp_color', 'cp_color2', 'cp_phone', 'cp_whatsapp', 'cp_notice',
             'cp_server_url', 'cp_dir', 'cp_prefix', 'cp_walled_extra'];
         $checks = ['cp_show_plans', 'cp_show_voucher', 'cp_show_member', 'cp_show_buy', 'cp_block_vpn', 'cp_block_dns_tunnel', 'cp_block_protocols', 'cp_mpesa_pay'];
         $vals = [];
@@ -324,7 +326,8 @@ switch ($action) {
         _admin();
         $router = captive_router($routes['2']) ?: ['id' => 0, 'name' => 'preview'];
         $page = in_array($routes['3'], CaptivePortal::$pages) ? $routes['3'] : 'login.html';
-        $files = CaptivePortal::files($router);
+        $theme = _get('theme');
+        $files = CaptivePortal::files($router, $theme);
         $state = [];
         if (_get('error')) {
             $state['error'] = 'invalid username or password';
@@ -334,9 +337,10 @@ switch ($action) {
         }
         $html = CaptivePortal::render($files[$page], CaptivePortal::sampleVars($state));
         // assets come from this server in preview; the form must not leave the preview
+        $fileQs = $theme ? '?theme=' . urlencode($theme) : '';
         $html = str_replace(['src="logo.png"', 'src="md5.js"'], [
-            'src="' . getUrl('captive/file/' . $router['id'] . '/logo.png') . '"',
-            'src="' . getUrl('captive/file/' . $router['id'] . '/md5.js') . '"',
+            'src="' . getUrl('captive/file/' . $router['id'] . '/logo.png' . $fileQs) . '"',
+            'src="' . getUrl('captive/file/' . $router['id'] . '/md5.js' . $fileQs) . '"',
         ], $html);
         $html = str_replace('</body>', '<script>document.forms.sendin && (document.forms.sendin.onsubmit = null, document.forms.sendin.submit = function () { alert("Preview: the router would now log in user " + this.username.value); });</script></body>', $html);
         header('Content-Type: text/html; charset=utf-8');
