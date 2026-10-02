@@ -338,7 +338,8 @@ class RouterScript
             $l[] = '# using existing router user "' . $router['username'] . '" saved in the billing system';
         }
         $l[] = '/ip service set api disabled=no port=' . $port;
-        $fetch = '/tool fetch url=' . self::quote($url) . ' keep-result=no';
+        $checkCert = (strpos($url, 'https://') === 0) ? ' check-certificate=no' : '';
+        $fetch = '/tool fetch url=' . self::quote($url) . $checkCert . ' keep-result=no';
         $l[] = '/system scheduler remove [find name=suntech-checkin]';
         $l[] = '/system scheduler add name=suntech-checkin start-time=startup interval=5m comment="SunTech ISP check-in" on-event=' .
             self::quote(':do { ' . $fetch . ' } on-error={ :log warning "SunTech ISP check-in failed" }');

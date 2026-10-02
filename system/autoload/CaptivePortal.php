@@ -248,7 +248,9 @@ class CaptivePortal
         }
         $script .= "# download portal pages from the billing server into " . $dir . "\n";
         foreach (array_keys(self::files($router)) as $f) {
-            $script .= '/tool fetch url=' . RouterScript::quote(self::fileUrl($router, $f)) . ' dst-path=' . RouterScript::quote($dir . '/' . $f) . "\n";
+            $fUrl = self::fileUrl($router, $f);
+            $checkCert = (strpos($fUrl, 'https://') === 0) ? ' check-certificate=no' : '';
+            $script .= '/tool fetch url=' . RouterScript::quote($fUrl) . $checkCert . ' dst-path=' . RouterScript::quote($dir . '/' . $f) . "\n";
         }
         $line = '/ip hotspot profile set [find default=no] html-directory=' . RouterScript::quote($dir);
         $script .= ($applyAllProfiles ? '' : "# use this portal on every hotspot profile (VLAN hotspots already do):\n# ") . $line . "\n";
