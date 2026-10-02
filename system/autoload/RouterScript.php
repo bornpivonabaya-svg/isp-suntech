@@ -320,15 +320,24 @@ class RouterScript
     public static function routerSetupScript($router, $serverUrl)
     {
         $url = self::checkinUrl($router, $serverUrl);
+        $serverUrl = rtrim($serverUrl, '/');
         $port = 8728;
         $parts = explode(':', $router['ip_address']);
         if (!empty($parts[1])) {
             $port = (int) $parts[1];
         }
+        $host = parse_url($serverUrl, PHP_URL_HOST) ?: 'ip.suntechke.com';
+        $domain = preg_replace('~^[^.]+\.~', '', $host);
+
         $l = [];
-        $l[] = '# SunTech ISP - connect router "' . $router['name'] . '" to the billing system';
-        $l[] = '# paste in Winbox > New Terminal (or SSH). Safe to run again.';
-        // only manage users this system generated, never touch an existing admin account
+        $l[] = '# =====================================================================';
+        $l[] = '# SunTech ISP - Complete Router & Hotspot Setup for "' . $router['name'] . '"';
+        $l[] = '# Paste in Winbox > New Terminal (or SSH). Completely safe to re-run.';
+        $l[] = '# =====================================================================';
+        $l[] = '';
+
+        // 1. API User & Port
+        $l[] = '# --- 1. API User & Port ---';
         if (strpos($router['username'], 'suntech') === 0) {
             $l[] = ':if ([:len [/user group find name=suntech-api]] = 0) do={ /user group add name=suntech-api policy=read,write,api,policy,test,sensitive,ftp }';
             $l[] = ':if ([:len [/user find name=' . self::quote($router['username']) . ']] = 0) do={ /user add name=' . self::quote($router['username']) .
@@ -338,14 +347,64 @@ class RouterScript
             $l[] = '# using existing router user "' . $router['username'] . '" saved in the billing system';
         }
         $l[] = '/ip service set api disabled=no port=' . $port;
+        $l[] = '';
+
+        // 2. WAN DHCP Client & DNS
+        $l[] = '# --- 2. WAN DHCP Client & DNS ---';
         $l[] = ':if ([:len [/ip dhcp-client find interface=ether1]] = 0) do={ /ip dhcp-client add interface=ether1 disabled=no } else={ /ip dhcp-client set [find interface=ether1] disabled=no }';
         $l[] = '/ip dns set servers=8.8.8.8,1.1.1.1 allow-remote-requests=yes';
+        $l[] = '';
+
+        // 3. Cloud Registration & Keep-Alive Scheduler
+        $l[] = '# --- 3. Registration & Keep-Alive Scheduler ---';
         $checkCert = (strpos($url, 'https://') === 0) ? ' check-certificate=no' : '';
         $fetch = '/tool fetch url=' . self::quote($url) . $checkCert . ' keep-result=no';
         $l[] = '/system scheduler remove [find name=suntech-checkin]';
         $l[] = '/system scheduler add name=suntech-checkin start-time=startup interval=5m comment="SunTech ISP check-in" on-event=' .
             self::quote(':do { ' . $fetch . ' } on-error={ :log warning "SunTech ISP check-in failed" }');
-        $l[] = ':do { ' . $fetch . '; :put "SunTech ISP: router registered" } on-error={ :put "SunTech ISP: cannot reach ' . rtrim($serverUrl, '/') . ' - check the Server URL and network" }';
+        $l[] = ':do { ' . $fetch . '; :put "SunTech ISP: Router registered successfully" } on-error={ :put "SunTech ISP: registration failed - check internet" }';
+        $l[] = '';
+
+        // 4. Hotspot Walled Garden Whitelist
+        $l[] = '# --- 4. Hotspot Walled Garden Whitelist ---';
+        $l[] = '/ip hotspot walled-garden remove [find comment~"SunTech"]';
+        $l[] = '/ip hotspot walled-garden add dst-host=' . self::quote($host) . ' comment="SunTech Portal" disabled=no';
+        if ($domain && $domain != $host) {
+            $l[] = '/ip hotspot walled-garden add dst-host=' . self::quote('*.' . $domain) . ' comment="SunTech Domains" disabled=no';
+        }
+        $l[] = '/ip hotspot walled-garden add dst-host="*.safaricom.co.ke" comment="SunTech M-Pesa" disabled=no';
+        $l[] = '/ip hotspot walled-garden add dst-host="daraja.safaricom.co.ke" comment="SunTech Daraja" disabled=no';
+        $l[] = '/ip hotspot walled-garden ip remove [find comment~"SunTech"]';
+        $l[] = '/ip hotspot walled-garden ip add dst-host=' . self::quote($host) . ' comment="SunTech Host" disabled=no';
+        $ipHost = gethostbyname($host);
+        if ($ipHost && $ipHost != $host) {
+            $l[] = '/ip hotspot walled-garden ip add dst-address=' . self::quote($ipHost) . ' comment="SunTech Server IP" disabled=no';
+        }
+        $l[] = '';
+
+        // 5. Download Captive Portal Files directly into suntech/
+        $l[] = '# --- 5. Download Captive Portal Files into suntech/ ---';
+        $portalDir = 'suntech';
+        $fileList = ['login.html', 'alogin.html', 'status.html', 'logout.html', 'error.html', 'redirect.html', 'rlogin.html', 'md5.js'];
+        foreach ($fileList as $f) {
+            $fUrl = $serverUrl . '/index.php?_route=captive/file/' . (int) $router['id'] . '/' . $f;
+            $fCheck = (strpos($fUrl, 'https://') === 0) ? ' check-certificate=no' : '';
+            $l[] = ':do { /tool fetch url=' . self::quote($fUrl) . $fCheck . ' dst-path=' . self::quote($portalDir . '/' . $f) . ' } on-error={ }';
+        }
+        $logoUrl = $serverUrl . '/index.php?_route=captive/file/' . (int) $router['id'] . '/logo.png';
+        $logoCheck = (strpos($logoUrl, 'https://') === 0) ? ' check-certificate=no' : '';
+        $l[] = ':do { /tool fetch url=' . self::quote($logoUrl) . $logoCheck . ' dst-path=' . self::quote($portalDir . '/logo.png') . ' } on-error={ }';
+        $l[] = '';
+
+        // 6. Configure Hotspot Profiles to use SunTech Portal
+        $l[] = '# --- 6. Configure Hotspot Profiles ---';
+        $l[] = ':if ([:len [/ip hotspot profile find name=suntech]] = 0) do={ /ip hotspot profile add name=suntech html-directory=suntech login-by=http-chap,http-pap } else={ /ip hotspot profile set [find name=suntech] html-directory=suntech login-by=http-chap,http-pap }';
+        $l[] = '/ip hotspot profile set [find] html-directory=suntech login-by=http-chap,http-pap';
+        $l[] = '';
+        $l[] = ':put "================================================================="';
+        $l[] = ':put "SunTech ISP: Setup completed! Router & Hotspot are ready to use."';
+        $l[] = ':put "================================================================="';
+
         return implode("\n", $l) . "\n";
     }
 

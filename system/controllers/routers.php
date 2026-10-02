@@ -147,6 +147,27 @@ switch ($action) {
             }
             $d->save();
 
+            // Automatically clone default hotspot plans for this router if none exist
+            $existingPlans = ORM::for_table('tbl_plans')->where('routers', $name)->count();
+            if ($existingPlans == 0) {
+                $srcPlans = ORM::for_table('tbl_plans')->where_not_equal('routers', $name)->find_many();
+                $copiedNames = [];
+                foreach ($srcPlans as $sp) {
+                    if (in_array($sp['name_plan'], $copiedNames)) continue;
+                    $copiedNames[] = $sp['name_plan'];
+                    $np = ORM::for_table('tbl_plans')->create();
+                    foreach ($sp->as_array() as $k => $v) {
+                        if ($k == 'id') continue;
+                        if ($k == 'routers') {
+                            $np->$k = $name;
+                        } else {
+                            $np->$k = $v;
+                        }
+                    }
+                    $np->save();
+                }
+            }
+
             if ($ip_address == '') {
                 r2(getUrl('routers/setup/') . $d->id(), 's', Lang::T('Router added, now run the script on the Mikrotik'));
             }
