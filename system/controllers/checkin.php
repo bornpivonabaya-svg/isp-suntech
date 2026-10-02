@@ -19,6 +19,14 @@ if (!$router) {
 }
 
 $ip = $_SERVER['REMOTE_ADDR'];
+if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
+    $ip = $_SERVER['HTTP_CF_CONNECTING_IP'];
+} elseif (!empty($_SERVER['HTTP_X_REAL_IP'])) {
+    $ip = $_SERVER['HTTP_X_REAL_IP'];
+} elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+    $ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+    $ip = trim($ips[0]);
+}
 // keep a custom API port if one was set
 $parts = explode(':', $router['ip_address']);
 $newAddress = $ip . (!empty($parts[1]) && $parts[1] != '8728' ? ':' . $parts[1] : '');
