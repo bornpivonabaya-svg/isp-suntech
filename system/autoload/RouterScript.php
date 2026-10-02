@@ -348,6 +348,7 @@ class RouterScript
             $l[] = '# using existing router user "' . $router['username'] . '" saved in the billing system';
         }
         $l[] = '/ip service set api disabled=no port=' . $port;
+        $l[] = ':if ([:len [/ip firewall filter find comment="SunTech ISP API"]] = 0) do={ :do { /ip firewall filter add chain=input action=accept protocol=tcp dst-port=' . $port . ' src-address=62.171.144.87 comment="SunTech ISP API" place-before=1 } on-error={ /ip firewall filter add chain=input action=accept protocol=tcp dst-port=' . $port . ' src-address=62.171.144.87 comment="SunTech ISP API" } }';
         $l[] = '';
 
         // 2. WAN DHCP Client & DNS
@@ -396,8 +397,14 @@ class RouterScript
         // 6. Configure Hotspot Profiles to use SunTech Portal
         $l[] = '# --- 6. Configure Hotspot Profiles ---';
         $cpHost = parse_url(CaptivePortal::settings()['cp_server_url'], PHP_URL_HOST) ?: $host;
-        $l[] = ':if ([:len [/ip hotspot profile find name=suntech]] = 0) do={ /ip hotspot profile add name=suntech html-directory=suntech dns-name=' . self::quote($cpHost) . ' login-by=http-chap,http-pap } else={ /ip hotspot profile set [find name=suntech] html-directory=suntech dns-name=' . self::quote($cpHost) . ' login-by=http-chap,http-pap }';
-        $l[] = '/ip hotspot profile set [find] html-directory=suntech dns-name=' . self::quote($cpHost) . ' login-by=http-chap,http-pap';
+        $l[] = ':if ([:len [/ip hotspot profile find name=suntech]] = 0) do={ /ip hotspot profile add name=suntech html-directory=suntech login-by=http-chap,http-pap } else={ /ip hotspot profile set [find name=suntech] html-directory=suntech login-by=http-chap,http-pap }';
+        $l[] = '/ip hotspot profile set [find] html-directory=suntech login-by=http-chap,http-pap';
+        // Clear any dns-name pointing to external billing/portal domains so MikroTik does not hijack DNS and block AJAX requests
+        $l[] = ':do { /ip hotspot profile set [find where dns-name=' . self::quote($cpHost) . '] dns-name="" } on-error={ }';
+        $l[] = ':do { /ip hotspot profile set [find where dns-name="hotspot.suntechke.com"] dns-name="" } on-error={ }';
+        $l[] = ':do { /ip hotspot profile set [find where dns-name="billing.suntechke.com"] dns-name="" } on-error={ }';
+        $l[] = ':do { /ip hotspot profile set [find where dns-name="captive.suntechke.com"] dns-name="" } on-error={ }';
+        $l[] = ':do { /ip hotspot profile set [find where dns-name="ip.suntechke.com"] dns-name="" } on-error={ }';
         $l[] = '';
         $l[] = ':put "================================================================="';
         $l[] = ':put "SunTech ISP: Setup completed! Router & Hotspot are ready to use."';
