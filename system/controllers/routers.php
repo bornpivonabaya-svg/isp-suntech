@@ -5,11 +5,26 @@
  *  by https://t.me/ibnux
  **/
 
+$action = $routes['1'];
+
+if ($action == 'rsc') {
+    $token = preg_replace('~[^a-f0-9]~', '', strtolower($routes['2']));
+    $d = strlen($token) == 32 ? ORM::for_table('tbl_routers')->where('api_token', $token)->find_one() : null;
+    if (!$d) {
+        http_response_code(404);
+        header('Content-Type: text/plain; charset=utf-8');
+        die('# Router not found');
+    }
+    $serverUrl = CaptivePortal::settings()['cp_server_url'];
+    header('Content-Type: text/plain; charset=utf-8');
+    header('Cache-Control: no-store, no-cache, must-revalidate');
+    echo RouterScript::routerSetupScript($d, $serverUrl);
+    die();
+}
+
 _admin();
 $ui->assign('_title', Lang::T('Network'));
 $ui->assign('_system_menu', 'network');
-
-$action = $routes['1'];
 $ui->assign('_admin', $admin);
 
 require_once $DEVICE_PATH . DIRECTORY_SEPARATOR . "MikrotikHotspot.php";
@@ -68,20 +83,6 @@ switch ($action) {
         $ui->assign('script', RouterScript::routerSetupScript($d, $serverUrl));
         $ui->display('admin/routers/setup.tpl');
         break;
-
-    case 'rsc':
-        $token = preg_replace('~[^a-f0-9]~', '', strtolower($routes['2']));
-        $d = strlen($token) == 32 ? ORM::for_table('tbl_routers')->where('api_token', $token)->find_one() : null;
-        if (!$d) {
-            http_response_code(404);
-            header('Content-Type: text/plain; charset=utf-8');
-            die('# Router not found');
-        }
-        $serverUrl = CaptivePortal::settings()['cp_server_url'];
-        header('Content-Type: text/plain; charset=utf-8');
-        header('Cache-Control: no-store, no-cache, must-revalidate');
-        echo RouterScript::routerSetupScript($d, $serverUrl);
-        die();
 
     case 'setup-status':
         header('Content-Type: application/json');
