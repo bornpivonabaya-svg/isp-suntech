@@ -269,11 +269,11 @@ switch ($action) {
             $d->type = 'Hotspot';
             $d->typebp = $typebp;
             $d->plan_type = $plan_type;
-            $d->limit_type = $limit_type;
-            $d->time_limit = $time_limit;
-            $d->time_unit = $time_unit;
-            $d->data_limit = $data_limit;
-            $d->data_unit = $data_unit;
+            $d->limit_type = ($typebp == 'Unlimited' || empty($limit_type)) ? null : $limit_type;
+            $d->time_limit = ($typebp == 'Unlimited' || empty($time_limit)) ? 0 : $time_limit;
+            $d->time_unit = ($typebp == 'Unlimited' || empty($time_unit)) ? null : $time_unit;
+            $d->data_limit = ($typebp == 'Unlimited' || empty($data_limit)) ? 0 : $data_limit;
+            $d->data_unit = ($typebp == 'Unlimited' || empty($data_unit)) ? null : $data_unit;
             $d->validity = $validity;
             $d->validity_unit = $validity_unit;
             $d->shared_users = $sharedusers;
@@ -385,12 +385,12 @@ switch ($action) {
             $d->price = $price; // Set price with or without tax based on configuration
             $d->price_old = $price_old;
             $d->typebp = $typebp;
-            $d->limit_type = $limit_type;
-            $d->time_limit = $time_limit;
-            $d->time_unit = $time_unit;
-            $d->data_limit = $data_limit;
+            $d->limit_type = ($typebp == 'Unlimited' || empty($limit_type)) ? null : $limit_type;
+            $d->time_limit = ($typebp == 'Unlimited' || empty($time_limit)) ? 0 : $time_limit;
+            $d->time_unit = ($typebp == 'Unlimited' || empty($time_unit)) ? null : $time_unit;
+            $d->data_limit = ($typebp == 'Unlimited' || empty($data_limit)) ? 0 : $data_limit;
             $d->plan_type = $plan_type;
-            $d->data_unit = $data_unit;
+            $d->data_unit = ($typebp == 'Unlimited' || empty($data_unit)) ? null : $data_unit;
             $d->validity = $validity;
             $d->validity_unit = $validity_unit;
             $d->shared_users = $sharedusers;
