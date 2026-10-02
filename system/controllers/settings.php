@@ -61,28 +61,28 @@ switch ($action) {
             if ($_app_stage == 'Demo') {
                 r2(getUrl('settings/app'), 'e', 'You cannot perform this action in Demo mode');
             }
-            $result = Message::sendWhatsapp(_get('testWa'), 'PHPNuxBill Test Whatsapp');
+            $result = Message::sendWhatsapp(_get('testWa'), 'SunTech ISP Test Whatsapp');
             r2(getUrl('settings/app'), 's', 'Test Whatsapp has been send<br>Result: ' . $result);
         }
         if (!empty(_get('testSms'))) {
             if ($_app_stage == 'Demo') {
                 r2(getUrl('settings/app'), 'e', 'You cannot perform this action in Demo mode');
             }
-            $result = Message::sendSMS(_get('testSms'), 'PHPNuxBill Test SMS');
+            $result = Message::sendSMS(_get('testSms'), 'SunTech ISP Test SMS');
             r2(getUrl('settings/app'), 's', 'Test SMS has been send<br>Result: ' . $result);
         }
         if (!empty(_get('testEmail'))) {
             if ($_app_stage == 'Demo') {
                 r2(getUrl('settings/app'), 'e', 'You cannot perform this action in Demo mode');
             }
-            Message::sendEmail(_get('testEmail'), 'PHPNuxBill Test Email', 'PHPNuxBill Test Email Body');
+            Message::sendEmail(_get('testEmail'), 'SunTech ISP Test Email', 'SunTech ISP Test Email Body');
             r2(getUrl('settings/app'), 's', 'Test Email has been send');
         }
         if (!empty(_get('testTg'))) {
             if ($_app_stage == 'Demo') {
                 r2(getUrl('settings/app'), 'e', 'You cannot perform this action in Demo mode');
             }
-            $result = Message::sendTelegram('PHPNuxBill Test Telegram');
+            $result = Message::sendTelegram('SunTech ISP Test Telegram');
             r2(getUrl('settings/app'), 's', 'Test Telegram has been send<br>Result: ' . $result);
         }
 
@@ -999,7 +999,7 @@ switch ($action) {
         header('Content-Type: application/force-download');
         header('Content-Type: application/octet-stream');
         header('Content-Type: application/download');
-        header('Content-Disposition: attachment;filename="phpnuxbill_' . count($tables) . '_tables_' . date('Y-m-d_H_i') . '.json"');
+        header('Content-Disposition: attachment;filename="suntech_' . count($tables) . '_tables_' . date('Y-m-d_H_i') . '.json"');
         header('Content-Transfer-Encoding: binary');
         $array = [];
         foreach ($tables as $table) {

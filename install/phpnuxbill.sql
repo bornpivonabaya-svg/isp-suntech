@@ -138,6 +138,7 @@ CREATE TABLE `tbl_routers` (
   `ip_address` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `username` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `password` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `api_token` varchar(64) NOT NULL DEFAULT '' COMMENT 'router check-in token',
   `description` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `coordinates` VARCHAR(50) NOT NULL DEFAULT '',
   `status` ENUM('Online', 'Offline') DEFAULT 'Online',
@@ -414,12 +415,15 @@ ALTER TABLE `tbl_user_recharges`
 ALTER TABLE `tbl_voucher`
   MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
+DROP TABLE IF EXISTS `tbl_vlans`;
+CREATE TABLE IF NOT EXISTS `tbl_vlans` (`id` int NOT NULL AUTO_INCREMENT, `router_id` int NOT NULL, `name` varchar(32) NOT NULL, `vlan_id` smallint UNSIGNED NOT NULL, `parent_interface` varchar(64) NOT NULL DEFAULT 'ether2', `service` enum('Hotspot','PPPoE','None') NOT NULL DEFAULT 'Hotspot', `gateway` varchar(43) NOT NULL COMMENT 'gateway ip in CIDR, ex 10.10.10.1/24', `pool_range` varchar(128) NOT NULL DEFAULT '', `dns` varchar(128) NOT NULL DEFAULT '', `dhcp` tinyint(1) NOT NULL DEFAULT '1', `dns_name` varchar(64) NOT NULL DEFAULT '' COMMENT 'hotspot dns name', `description` varchar(256) NOT NULL DEFAULT '', `enabled` tinyint(1) NOT NULL DEFAULT '1', `sync_status` varchar(16) NOT NULL DEFAULT 'pending', `sync_message` text, `last_sync` datetime DEFAULT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `router_vlan` (`router_id`,`vlan_id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 SET FOREIGN_KEY_CHECKS=1;
 COMMIT;
 
 INSERT INTO
     `tbl_appconfig` (`id`, `setting`, `value`)
-VALUES (1, 'CompanyName', 'PHPNuxBill'), (2, 'currency_code', 'Rp.'), (3, 'language', 'english'), (4, 'show-logo', '1'), (5, 'nstyle', 'blue'), (6, 'timezone', 'Asia/Jakarta'), (7, 'dec_point', ','), (8, 'thousands_sep', '.'), (9, 'rtl', '0'), (10, 'address', ''), (11, 'phone', ''), (12, 'date_format', 'd M Y'), (13, 'note', 'Thank you...');
+VALUES (1, 'CompanyName', 'SunTech ISP'), (2, 'currency_code', 'KES'), (3, 'language', 'english'), (4, 'show-logo', '1'), (5, 'nstyle', 'blue'), (6, 'timezone', 'Africa/Nairobi'), (7, 'dec_point', '.'), (8, 'thousands_sep', ','), (9, 'rtl', '0'), (10, 'address', ''), (11, 'phone', ''), (12, 'date_format', 'd M Y'), (13, 'note', 'Thank you...'), (14, 'country_code_phone', '254');
 
 
 INSERT INTO

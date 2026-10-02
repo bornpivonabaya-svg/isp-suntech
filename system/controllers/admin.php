@@ -60,6 +60,20 @@ switch ($do) {
 
         break;
     default:
+        // SunTech local testing: auto login as SuperAdmin, only in Dev stage and only from this PC
+        $isLocal = in_array($_SERVER['REMOTE_ADDR'], ['127.0.0.1', '::1'])
+            && empty($_SERVER['HTTP_X_FORWARDED_FOR']) && empty($_SERVER['HTTP_CF_CONNECTING_IP']);
+        if ($_app_stage == 'Dev' && $isLocal && !$isApi && _get('manual') == '') {
+            $d = ORM::for_table('tbl_users')->where('user_type', 'SuperAdmin')->where('status', 'Active')->order_by_asc('id')->find_one();
+            if ($d) {
+                $_SESSION['aid'] = $d['id'];
+                Admin::setCookie($d['id']);
+                $d->last_login = date('Y-m-d H:i:s');
+                $d->save();
+                _log($d['username'] . ' auto login (Dev, localhost)', $d['user_type'], $d['id']);
+                r2(getUrl('dashboard'), 's', Lang::T('Login Successful'));
+            }
+        }
         run_hook('view_login'); #HOOK
         $csrf_token = Csrf::generateAndStoreToken();
         $ui->assign('csrf_token', $csrf_token);

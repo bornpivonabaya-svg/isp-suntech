@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="{$app_url}/ui/ui/styles/bootstrap.min.css">
     <link rel="stylesheet" href="{$app_url}/ui/ui/styles/modern-AdminLTE.min.css">
     <link rel="stylesheet" href="{$app_url}/ui/ui/styles/sweetalert2.min.css" />
+    <link rel="stylesheet" href="{$app_url}/ui/ui/styles/suntech.css?2026.10.2e" />
     <script src="{$app_url}/ui/ui/scripts/sweetalert2.all.min.js"></script>
 
 

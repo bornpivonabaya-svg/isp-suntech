@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-    <title>PHPNuxBill Updaters</title>
+    <title>SunTech ISP Updaters</title>
     <link rel="shortcut icon" type="image/x-icon" href="img/favicon.ico">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -20,7 +20,7 @@
         <hr>
 
         <div class="span12">
-            <h4> PHPNuxBill Updater </h4>
+            <h4> SunTech ISP Updater </h4>
             <pre><?php
             include '../config.php';
             try{
@@ -100,7 +100,7 @@
             ?></pre>
         </div>
     </div>
-    <div class="footer">Copyright &copy; 2021 PHPNuxBill. All Rights Reserved<br /><br /></div>
+    <div class="footer">SunTech ISP &middot; built on PHPNuxBill (GPL)<br /><br /></div>
 </body>
 
 </html>

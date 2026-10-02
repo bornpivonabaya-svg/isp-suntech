@@ -44,8 +44,8 @@
                     datasets: [{
                         label: 'Registered Members',
                         data: data,
-                        backgroundColor: 'rgba(0, 0, 255, 0.5)',
-                        borderColor: 'rgba(0, 0, 255, 0.7)',
+                        backgroundColor: 'rgba(245, 140, 20, 0.85)', borderRadius: 6,
+                        borderColor: 'rgba(245, 140, 20, 1)',
                         borderWidth: 1
                     }]
                 },

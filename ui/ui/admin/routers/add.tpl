@@ -22,10 +22,19 @@
                     <div class="form-group">
                         <label class="col-md-2 control-label">{Lang::T('Router Name / Location')}</label>
                         <div class="col-md-6">
-                            <input type="text" class="form-control" id="name" name="name" maxlength="32">
+                            <input type="text" class="form-control" id="name" name="name" maxlength="32" required placeholder="Town-Center">
                             <p class="help-block">{Lang::T('Name of Area that router operated')}</p>
                         </div>
                     </div>
+                    <div class="form-group">
+                        <div class="col-md-offset-2 col-md-6">
+                            <div class="alert alert-info" style="margin-bottom:0">
+                                <i class="fa fa-magic"></i> {Lang::T('Just enter a name and save. You will get a script to paste on the Mikrotik, it connects the router to the system automatically.')}
+                                <a href="#" onclick="$('#manual').toggle();return false">{Lang::T('Enter IP manually instead')}</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="manual" style="display:none">
                     <div class="form-group">
                         <label class="col-md-2 control-label">{Lang::T('IP Address')}</label>
                         <div class="col-md-6">
@@ -46,17 +55,18 @@
                             onmouseleave="this.type = 'password'" onmouseenter="this.type = 'text'">
                         </div>
                     </div>
+                    <div class="form-group row">
+                        <label class="col-md-2 control-label"></label>
+                        <div class="col-md-6">
+                            <label><input type="checkbox" name="testIt" value="yes"> {Lang::T('Test Connection')}</label>
+                        </div>
+                    </div>
+                    </div>
                     <div class="form-group">
                         <label class="col-md-2 control-label">{Lang::T('Description')}</label>
                         <div class="col-md-6">
                             <textarea class="form-control" id="description" name="description"></textarea>
                             <p class="help-block">{Lang::T('Explain Coverage of router')}</p>
-                        </div>
-                    </div>
-                    <div class="form-group row">
-                        <label class="col-md-2 control-label"></label>
-                        <div class="col-md-6">
-                            <label><input type="checkbox" checked name="testIt" value="yes"> {Lang::T('Test Connection')}</label>
                         </div>
                     </div>
                     <div class="form-group">

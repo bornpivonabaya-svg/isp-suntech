@@ -22,6 +22,7 @@
     <link rel="stylesheet" href="{$app_url}/ui/ui/summernote/summernote.min.css" />
     <link rel="stylesheet" href="{$app_url}/ui/ui/styles/phpnuxbill.css?2025.2.4" />
     <link rel="stylesheet" href="{$app_url}/ui/ui/styles/7.css" />
+    <link rel="stylesheet" href="{$app_url}/ui/ui/styles/suntech.css?2026.10.2e" />
 
     <script src="{$app_url}/ui/ui/scripts/sweetalert2.all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.5.1/dist/chart.min.js"></script>
@@ -38,7 +39,7 @@
     <div class="wrapper">
         <header class="main-header">
             <a href="{Text::url('dashboard')}" class="logo">
-                <span class="logo-mini"><b>N</b>uX</span>
+                <span class="logo-mini"><b>S</b>T</span>
                 <span class="logo-lg">{$_c['CompanyName']}</span>
             </a>
             <nav class="navbar navbar-static-top">
@@ -254,6 +255,10 @@
                                         href="{Text::url('pool/port')}">Port Pool</a></li>
                                 <li {if $_routes[0] eq 'odp' and $_routes[1] eq '' }class="active" {/if}><a
                                         href="{Text::url('odp')}">ODP List</a></li>
+                                <li {if $_routes[0] eq 'vlan'}class="active" {/if}><a
+                                        href="{Text::url('vlan/list')}">VLANs</a></li>
+                                <li {if $_routes[0] eq 'captive'}class="active" {/if}><a
+                                        href="{Text::url('captive')}">{Lang::T('Captive Portal')}</a></li>
                                 {$_MENU_NETWORK}
                             </ul>
                         </li>
@@ -362,7 +367,7 @@
                             </a>
                             <ul class="treeview-menu">
                                 <li {if $_routes[1] eq 'list' }class="active" {/if}><a
-                                        href="{Text::url('logs/phpnuxbill')}">PhpNuxBill</a></li>
+                                        href="{Text::url('logs/phpnuxbill')}">SunTech ISP</a></li>
                                 {if $_c['radius_enable']}
                                     <li {if $_routes[1] eq 'radius' }class="active" {/if}><a
                                             href="{Text::url('logs/radius')}">Radius</a>

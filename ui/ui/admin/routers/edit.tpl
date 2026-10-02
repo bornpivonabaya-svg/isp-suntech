@@ -79,6 +79,7 @@
                     <div class="form-group">
                         <div class="col-lg-offset-2 col-lg-10">
                             <button class="btn btn-primary" onclick="return ask(this, '{Lang::T("Continue the process of changing Routers?")}')" type="submit">{Lang::T('Save Changes')}</button>
+                            <a href="{Text::url('routers/setup/', $d['id'])}" class="btn btn-success"><i class="fa fa-terminal"></i> {Lang::T('Setup Script')}</a>
                             Or <a href="{Text::url('')}routers/list">{Lang::T('Cancel')}</a>
                         </div>
                     </div>

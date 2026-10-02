@@ -63,7 +63,7 @@
                                     </td>
                                     <td style="background-color: black; color: black;"
                                         onmouseleave="this.style.backgroundColor = 'black';"
-                                        onmouseenter="this.style.backgroundColor = 'white';">{$ds['ip_address']}</td>
+                                        onmouseenter="this.style.backgroundColor = 'white';">{if $ds['ip_address']}{$ds['ip_address']}{else}<a href="{Text::url('routers/setup/', $ds['id'])}" class="label label-warning">{Lang::T('Waiting for setup')}</a>{/if}</td>
                                     <td style="background-color: black; color: black;"
                                         onmouseleave="this.style.backgroundColor = 'black';"
                                         onmouseenter="this.style.backgroundColor = 'white';">{$ds['username']}</td>
@@ -83,6 +83,8 @@
                                     {/if}
                                     <td>{if $ds['enabled'] == 1}{Lang::T('Enabled')}{else}{Lang::T('Disabled')}{/if}</td>
                                     <td>
+                                        <a href="{Text::url('routers/setup/', $ds['id'])}" class="btn btn-success btn-xs"
+                                            title="{Lang::T('Setup Script')}"><i class="fa fa-terminal"></i></a>
                                         <a href="{Text::url('')}routers/edit/{$ds['id']}"
                                             class="btn btn-info btn-xs">{Lang::T('Edit')}</a>
                                         <a href="{Text::url('')}routers/delete/{$ds['id']}" id="{$ds['id']}"

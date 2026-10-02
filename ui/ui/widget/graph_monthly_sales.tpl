@@ -44,8 +44,8 @@
                         datasets: [{
                             label: 'Monthly Sales',
                             data: data,
-                            backgroundColor: 'rgba(2, 10, 242)', // Customize the background color
-                            borderColor: 'rgba(255, 99, 132, 1)', // Customize the border color
+                            backgroundColor: 'rgba(37, 99, 235, 0.85)', borderRadius: 6, // Customize the background color
+                            borderColor: 'rgba(37, 99, 235, 1)', // Customize the border color
                             borderWidth: 1
                         }]
                     },

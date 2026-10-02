@@ -44,6 +44,51 @@ switch ($action) {
         }
         break;
 
+    case 'setup':
+        $d = ORM::for_table('tbl_routers')->find_one($routes['2']);
+        if (!$d) {
+            r2(getUrl('routers/list'), 'e', Lang::T('Data Not Found'));
+        }
+        if (RouterScript::prepareAutoSetup($d)) {
+            $d->save();
+        }
+        $serverUrl = CaptivePortal::settings()['cp_server_url'];
+        $lan = [];
+        foreach ((array) @gethostbynamel(gethostname()) as $ip) {
+            if ($ip && strpos($ip, '127.') !== 0) {
+                $lan[] = preg_replace('~//[^/]+~', '//' . $ip, APP_URL, 1);
+            }
+        }
+        $ui->assign('d', $d);
+        $ui->assign('server_url', $serverUrl);
+        $ui->assign('lan_urls', $lan);
+        $ui->assign('local_only', CaptivePortal::serverUrlIsLocalOnly());
+        $ui->assign('script', RouterScript::routerSetupScript($d, $serverUrl));
+        $ui->display('admin/routers/setup.tpl');
+        break;
+
+    case 'setup-status':
+        header('Content-Type: application/json');
+        $d = ORM::for_table('tbl_routers')->find_one($routes['2']);
+        echo json_encode($d ? ['ip' => $d['ip_address'], 'status' => $d['status'], 'last_seen' => $d['last_seen']] : []);
+        die();
+
+    case 'server-url':
+        // address routers use to reach this system (shared with the captive portal)
+        $url = rtrim(_post('server_url'), '/');
+        if (!preg_match('~^https?://[^\s/]+~', $url)) {
+            r2(getUrl('routers/setup/') . _post('id'), 'e', Lang::T('Server URL must start with http:// or https://'));
+        }
+        $c = ORM::for_table('tbl_appconfig')->where('setting', 'cp_server_url')->find_one();
+        if (!$c) {
+            $c = ORM::for_table('tbl_appconfig')->create();
+            $c->setting = 'cp_server_url';
+        }
+        $c->value = $url;
+        $c->save();
+        r2(getUrl('routers/setup/') . _post('id'), 's', Lang::T('Server URL saved'));
+        break;
+
     case 'delete':
         $id  = $routes['2'];
         run_hook('router_delete'); #HOOK
@@ -66,9 +111,10 @@ switch ($action) {
         if (Validator::Length($name, 30, 1) == false) {
             $msg .= 'Name should be between 1 to 30 characters' . '<br>';
         }
-        if($enabled || _post("testIt")){
-            if ($ip_address == '' or $username == '') {
-                $msg .= Lang::T('All field is required') . '<br>';
+        // no IP = automatic setup: the router registers itself with the setup script
+        if ($ip_address != '') {
+            if ($username == '') {
+                $msg .= Lang::T('Username is required when IP Address is set') . '<br>';
             }
 
             $d = ORM::for_table('tbl_routers')->where('ip_address', $ip_address)->find_one();
@@ -76,13 +122,16 @@ switch ($action) {
                 $msg .= Lang::T('IP Router Already Exist') . '<br>';
             }
         }
+        if (ORM::for_table('tbl_routers')->where('name', $name)->find_one()) {
+            $msg .= 'Name Already Exists<br>';
+        }
         if (strtolower($name) == 'radius') {
             $msg .= '<b>Radius</b> name is reserved<br>';
         }
 
         if ($msg == '') {
             run_hook('add_router'); #HOOK
-            if (_post("testIt")) {
+            if (_post("testIt") && $ip_address != '') {
                 (new MikrotikHotspot())->getClient($ip_address, $username, $password);
             }
             $d = ORM::for_table('tbl_routers')->create();
@@ -92,8 +141,15 @@ switch ($action) {
             $d->password = $password;
             $d->description = $description;
             $d->enabled = $enabled;
+            if ($ip_address == '') {
+                RouterScript::prepareAutoSetup($d);
+                $d->status = 'Offline';
+            }
             $d->save();
 
+            if ($ip_address == '') {
+                r2(getUrl('routers/setup/') . $d->id(), 's', Lang::T('Router added, now run the script on the Mikrotik'));
+            }
             r2(getUrl('routers/edit/') . $d->id(), 's', Lang::T('Data Created Successfully'));
         } else {
             r2(getUrl('routers/add'), 'e', $msg);
@@ -114,10 +170,8 @@ switch ($action) {
         if (Validator::Length($name, 30, 4) == false) {
             $msg .= 'Name should be between 5 to 30 characters' . '<br>';
         }
-        if($enabled || _post("testIt")){
-            if ($ip_address == '' or $username == '') {
-                $msg .= Lang::T('All field is required') . '<br>';
-            }
+        if ($ip_address != '' && $username == '') {
+            $msg .= Lang::T('Username is required when IP Address is set') . '<br>';
         }
 
         $id = _post('id');
@@ -135,7 +189,7 @@ switch ($action) {
         }
         $oldname = $d['name'];
 
-        if($enabled || _post("testIt")){
+        if ($ip_address != '') {
             if ($d['ip_address'] != $ip_address) {
                 $c = ORM::for_table('tbl_routers')->where('ip_address', $ip_address)->where_not_equal('id', $id)->find_one();
                 if ($c) {
@@ -150,7 +204,7 @@ switch ($action) {
 
         if ($msg == '') {
             run_hook('router_edit'); #HOOK
-            if (_post("testIt")) {
+            if (_post("testIt") && $ip_address != '') {
                 (new MikrotikHotspot())->getClient($ip_address, $username, $password);
             }
             $d->name = $name;

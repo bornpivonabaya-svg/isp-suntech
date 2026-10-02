@@ -209,5 +209,11 @@
     ],
     "2025.11.17" : [
         "CREATE TABLE IF NOT EXISTS `tbl_odps` (`id` INT NOT NULL AUTO_INCREMENT, `name` VARCHAR(32) NOT NULL COLLATE 'latin1_swedish_ci',`port_amount` INT NOT NULL,`attenuation` DECIMAL(15,2) NOT NULL DEFAULT '0.00',`address` MEDIUMTEXT NOT NULL COLLATE 'latin1_swedish_ci',`coordinates` VARCHAR(50) NOT NULL COLLATE 'latin1_swedish_ci', `coverage` INT NOT NULL DEFAULT '0', PRIMARY KEY (`id`) USING BTREE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;"
+    ],
+    "2026.10.2" : [
+        "CREATE TABLE IF NOT EXISTS `tbl_vlans` (`id` int NOT NULL AUTO_INCREMENT, `router_id` int NOT NULL, `name` varchar(32) NOT NULL, `vlan_id` smallint UNSIGNED NOT NULL, `parent_interface` varchar(64) NOT NULL DEFAULT 'ether2', `service` enum('Hotspot','PPPoE','None') NOT NULL DEFAULT 'Hotspot', `gateway` varchar(43) NOT NULL COMMENT 'gateway ip in CIDR, ex 10.10.10.1/24', `pool_range` varchar(128) NOT NULL DEFAULT '', `dns` varchar(128) NOT NULL DEFAULT '', `dhcp` tinyint(1) NOT NULL DEFAULT '1', `dns_name` varchar(64) NOT NULL DEFAULT '' COMMENT 'hotspot dns name', `description` varchar(256) NOT NULL DEFAULT '', `enabled` tinyint(1) NOT NULL DEFAULT '1', `sync_status` varchar(16) NOT NULL DEFAULT 'pending', `sync_message` text, `last_sync` datetime DEFAULT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `router_vlan` (`router_id`,`vlan_id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;"
+    ],
+    "2026.10.3" : [
+        "ALTER TABLE `tbl_routers` ADD `api_token` varchar(64) NOT NULL DEFAULT '' COMMENT 'router check-in token' AFTER `password`;"
     ]
 }

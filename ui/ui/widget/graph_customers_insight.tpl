@@ -25,8 +25,8 @@
                 datasets: [{
                     label: 'User Recharges',
                     data: [parseInt(u_act), parseInt(expired), parseInt(inactive)],
-                    backgroundColor: ['rgba(4, 191, 13)', 'rgba(191, 35, 4)', 'rgba(0, 0, 255, 0.5'],
-                    borderColor: ['rgba(0, 255, 0, 1)', 'rgba(255, 99, 132, 1)', 'rgba(0, 0, 255, 0.7'],
+                    backgroundColor: ['#16a34a', '#e11d48', '#94a3b8'],
+                    borderColor: ['#ffffff', '#ffffff', '#ffffff'],
                     borderWidth: 1
                 }]
             };
