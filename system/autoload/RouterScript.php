@@ -368,19 +368,19 @@ class RouterScript
 
         // 4. Hotspot Walled Garden Whitelist
         $l[] = '# --- 4. Hotspot Walled Garden Whitelist ---';
-        $l[] = '/ip hotspot walled-garden remove [find comment~"SunTech"]';
-        $l[] = '/ip hotspot walled-garden add dst-host=' . self::quote($host) . ' comment="SunTech Portal" disabled=no';
+        $l[] = ':do { /ip hotspot walled-garden remove [find where !dynamic and comment~"SunTech"] } on-error={ }';
+        $l[] = ':if ([:len [/ip hotspot walled-garden find dst-host=' . self::quote($host) . ']] = 0) do={ /ip hotspot walled-garden add dst-host=' . self::quote($host) . ' comment="SunTech Portal" disabled=no }';
         if ($domain && $domain != $host) {
-            $l[] = '/ip hotspot walled-garden add dst-host=' . self::quote('*.' . $domain) . ' comment="SunTech Domains" disabled=no';
+            $l[] = ':if ([:len [/ip hotspot walled-garden find dst-host=' . self::quote('*.' . $domain) . ']] = 0) do={ /ip hotspot walled-garden add dst-host=' . self::quote('*.' . $domain) . ' comment="SunTech Domains" disabled=no }';
         }
-        $l[] = '/ip hotspot walled-garden add dst-host="*.safaricom.co.ke" comment="SunTech M-Pesa" disabled=no';
-        $l[] = '/ip hotspot walled-garden add dst-host="daraja.safaricom.co.ke" comment="SunTech Daraja" disabled=no';
-        $l[] = '/ip hotspot walled-garden ip remove [find comment~"SunTech"]';
-        $l[] = '/ip hotspot walled-garden ip add dst-host=' . self::quote($host) . ' comment="SunTech Host" disabled=no';
-        $l[] = '/ip hotspot walled-garden ip add dst-address="62.171.144.87" comment="SunTech Server IP" disabled=no';
+        $l[] = ':if ([:len [/ip hotspot walled-garden find dst-host="*.safaricom.co.ke"]] = 0) do={ /ip hotspot walled-garden add dst-host="*.safaricom.co.ke" comment="SunTech M-Pesa" disabled=no }';
+        $l[] = ':if ([:len [/ip hotspot walled-garden find dst-host="daraja.safaricom.co.ke"]] = 0) do={ /ip hotspot walled-garden add dst-host="daraja.safaricom.co.ke" comment="SunTech Daraja" disabled=no }';
+        $l[] = ':do { /ip hotspot walled-garden ip remove [find where !dynamic and comment~"SunTech"] } on-error={ }';
+        $l[] = ':if ([:len [/ip hotspot walled-garden ip find dst-host=' . self::quote($host) . ']] = 0) do={ /ip hotspot walled-garden ip add dst-host=' . self::quote($host) . ' comment="SunTech Host" disabled=no }';
+        $l[] = ':if ([:len [/ip hotspot walled-garden ip find dst-address="62.171.144.87"]] = 0) do={ /ip hotspot walled-garden ip add dst-address="62.171.144.87" comment="SunTech Server IP" disabled=no }';
         $ipHost = gethostbyname($host);
         if ($ipHost && $ipHost != $host && $ipHost != '62.171.144.87') {
-            $l[] = '/ip hotspot walled-garden ip add dst-address=' . self::quote($ipHost) . ' comment="SunTech Cloudflare IP" disabled=no';
+            $l[] = ':if ([:len [/ip hotspot walled-garden ip find dst-address=' . self::quote($ipHost) . ']] = 0) do={ /ip hotspot walled-garden ip add dst-address=' . self::quote($ipHost) . ' comment="SunTech Cloudflare IP" disabled=no }';
         }
         $l[] = '';
 
