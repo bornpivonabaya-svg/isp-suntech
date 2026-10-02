@@ -338,6 +338,8 @@ class RouterScript
             $l[] = '# using existing router user "' . $router['username'] . '" saved in the billing system';
         }
         $l[] = '/ip service set api disabled=no port=' . $port;
+        $l[] = ':if ([:len [/ip dhcp-client find interface=ether1]] = 0) do={ /ip dhcp-client add interface=ether1 disabled=no } else={ /ip dhcp-client set [find interface=ether1] disabled=no }';
+        $l[] = '/ip dns set servers=8.8.8.8,1.1.1.1 allow-remote-requests=yes';
         $checkCert = (strpos($url, 'https://') === 0) ? ' check-certificate=no' : '';
         $fetch = '/tool fetch url=' . self::quote($url) . $checkCert . ' keep-result=no';
         $l[] = '/system scheduler remove [find name=suntech-checkin]';
