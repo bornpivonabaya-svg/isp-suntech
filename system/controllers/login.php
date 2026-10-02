@@ -338,11 +338,17 @@ switch ($do) {
                 $favicon = $UPLOAD_URL_PATH . DIRECTORY_SEPARATOR . 'favicon.default.png';
             }
 
+            $hotspot_plans = ORM::for_table('tbl_plans')
+                ->where('type', 'Hotspot')
+                ->where('enabled', 1)
+                ->order_by_asc('price')
+                ->find_many();
+            $ui->assign('hotspot_plans', $hotspot_plans);
             $ui->assign('login_logo', $login_logo);
             $ui->assign('wallpaper', $wallpaper);
             $ui->assign('favicon', $favicon);
             $ui->assign('csrf_token', $csrf_token);
-            $ui->assign('_title', Lang::T('Login'));
+            $ui->assign('_title', Lang::T('Hotspot Portal'));
             switch ($config['login_page_type']) {
                 case 'custom':
                     $ui->display('customer/login-custom-' . $config['login_Page_template'] . '.tpl');
