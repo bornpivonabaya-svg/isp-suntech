@@ -409,8 +409,96 @@ class RouterScript
         $l[] = ':if ($wanReady) do={ :put "SunTech ISP: WAN is online" } else={ :put "SunTech ISP: WAN not ready yet - check-in will retry via scheduler" }';
         $l[] = '';
 
-        // 3. Cloud Registration & Keep-Alive Scheduler
-        $l[] = '# --- 3. Registration & Keep-Alive Scheduler ---';
+        // 3. Wireless (Wi-Fi) & LAN Setup
+        $cpSettings = CaptivePortal::settings();
+        $brand = !empty($cpSettings['cp_title']) ? trim($cpSettings['cp_title']) : 'SunTech';
+        $baseSsid = preg_match('~wifi|hotspot~i', $brand) ? $brand : ($brand . ' WiFi');
+        $ssid2g = $baseSsid;
+        $ssid5g = $baseSsid . ' 5G';
+
+        $l[] = '# --- 3. Wireless (Wi-Fi) & LAN Setup ---';
+        $l[] = '# Ensure LAN bridge exists';
+        $l[] = ':local brName "bridge"';
+        $l[] = ':if ([:len [/interface bridge find]] = 0) do={ /interface bridge add name=bridge comment="SunTech LAN Bridge" } else={ :set brName [/interface bridge get ([/interface bridge find]->0) name] }';
+        $l[] = ':if ([:len [/interface list member find interface=$brName list=LAN]] = 0) do={ :do { /interface list member add interface=$brName list=LAN comment="SunTech LAN" } on-error={ } }';
+        $l[] = '';
+        $l[] = '# Enable and configure standard wireless interfaces (wlan1, wlan2)';
+        $l[] = ':do {';
+        $l[] = '    :local wList [/interface wireless find]';
+        $l[] = '    :if ([:len $wList] > 0) do={';
+        $l[] = '        /interface wireless enable $wList';
+        $l[] = '        :foreach w in=$wList do={';
+        $l[] = '            :local wBand ""';
+        $l[] = '            :do { :set wBand [/interface wireless get $w band] } on-error={ }';
+        $l[] = '            :local wSsid ' . self::quote($ssid2g) . ';';
+        $l[] = '            :if ($wBand ~ "5ghz") do={ :set wSsid ' . self::quote($ssid5g) . '; }';
+        $l[] = '            :do { /interface wireless set $w mode=ap-bridge ssid=$wSsid security-profile=default wireless-protocol=802.11 disabled=no } on-error={';
+        $l[] = '                :do { /interface wireless set $w mode=ap-bridge ssid=$wSsid disabled=no } on-error={ }';
+        $l[] = '            }';
+        $l[] = '            :local wName [/interface wireless get $w name]';
+        $l[] = '            :if ([:len [/interface bridge port find interface=$wName]] = 0) do={';
+        $l[] = '                :do { /interface bridge port add interface=$wName bridge=$brName comment="SunTech WiFi" } on-error={ }';
+        $l[] = '            }';
+        $l[] = '        }';
+        $l[] = '        :put "SunTech ISP: Wireless (wlan) enabled with SSID: ' . $ssid2g . '"';
+        $l[] = '    }';
+        $l[] = '} on-error={ }';
+        $l[] = '';
+        $l[] = '# RouterOS v7 WiFi (wifi1, wifi2) safe setup';
+        $l[] = ':do {';
+        $v7WifiInner = ':local wifiList [/interface wifi find]; ' .
+            ':if ([:len $wifiList] > 0) do={ ' .
+                '/interface wifi enable $wifiList; ' .
+                ':foreach w in=$wifiList do={ ' .
+                    ':local wBand ""; ' .
+                    ':do { :set wBand [/interface wifi get $w configuration.band] } on-error={ }; ' .
+                    ':local wSsid "' . $ssid2g . '"; ' .
+                    ':if ($wBand ~ "5ghz") do={ :set wSsid "' . $ssid5g . '" }; ' .
+                    ':do { /interface wifi set $w configuration.mode=ap configuration.ssid=$wSsid disabled=no } on-error={ ' .
+                        ':do { /interface wifi enable $w } on-error={ } ' .
+                    '}; ' .
+                    ':local wName [/interface wifi get $w name]; ' .
+                    ':if ([:len [/interface bridge port find interface=$wName]] = 0) do={ ' .
+                        ':do { /interface bridge port add interface=$wName bridge=$brName comment="SunTech WiFi" } on-error={ } ' .
+                    '} ' .
+                '} ' .
+            '}';
+        $l[] = '    :local v7WifiCmd ' . self::quote($v7WifiInner) . ';';
+        $l[] = '    [:parse $v7WifiCmd]';
+        $l[] = '} on-error={ }';
+        $l[] = '';
+        $l[] = '# Add LAN ethernet ports (ether2-ether5) to bridge';
+        $l[] = ':foreach p in={"ether2";"ether3";"ether4";"ether5"} do={';
+        $l[] = '    :if ([:len [/interface find name=$p]] > 0) do={';
+        $l[] = '        :if ([:len [/interface bridge port find interface=$p]] = 0 && [:len [/interface list member find interface=$p list=WAN]] = 0) do={';
+        $l[] = '            :do { /interface bridge port add interface=$p bridge=$brName comment="SunTech LAN" } on-error={ }';
+        $l[] = '        }';
+        $l[] = '    }';
+        $l[] = '}';
+        $l[] = '';
+        $l[] = '# Default LAN IP & DHCP if bridge has none';
+        $l[] = ':if ([:len [/ip address find interface=$brName]] = 0) do={';
+        $l[] = '    /ip address add address=192.168.88.1/24 interface=$brName comment="SunTech LAN"';
+        $l[] = '    :if ([:len [/ip pool find name=dhcp-pool-lan]] = 0) do={ /ip pool add name=dhcp-pool-lan ranges=192.168.88.10-192.168.88.254 comment="SunTech LAN Pool" }';
+        $l[] = '    :if ([:len [/ip dhcp-server find interface=$brName]] = 0) do={ /ip dhcp-server add name=dhcp-lan interface=$brName address-pool=dhcp-pool-lan lease-time=1h disabled=no }';
+        $l[] = '    :if ([:len [/ip dhcp-server network find address=192.168.88.0/24]] = 0) do={ /ip dhcp-server network add address=192.168.88.0/24 gateway=192.168.88.1 dns-server=192.168.88.1 comment="SunTech LAN" }';
+        $l[] = '}';
+        $l[] = '';
+        $l[] = '# Default Hotspot server on LAN bridge if none configured';
+        $l[] = ':if ([:len [/ip hotspot find]] = 0) do={';
+        $l[] = '    :if ([:len [/ip hotspot profile find name=suntech]] = 0) do={';
+        $l[] = '        /ip hotspot profile add name=suntech hotspot-address=192.168.88.1 html-directory=suntech login-by=http-chap,http-pap';
+        $l[] = '    }';
+        $l[] = '    :local hsPool "dhcp-pool-lan"';
+        $l[] = '    :if ([:len [/ip pool find name=$hsPool]] = 0 && [:len [/ip pool find]] > 0) do={ :set hsPool [/ip pool get ([/ip pool find]->0) name] }';
+        $l[] = '    :if ([:len [/ip pool find name=$hsPool]] > 0) do={';
+        $l[] = '        /ip hotspot add name=hs-lan interface=$brName address-pool=$hsPool profile=suntech disabled=no';
+        $l[] = '    }';
+        $l[] = '}';
+        $l[] = '';
+
+        // 4. Cloud Registration & Keep-Alive Scheduler
+        $l[] = '# --- 4. Registration & Keep-Alive Scheduler ---';
         $checkCert = (strpos($url, 'https://') === 0) ? ' check-certificate=no' : '';
         // The scheduler fetches the check-in URL and saves the response as a script.
         // Normally the server returns "ok". When a captive portal update is queued,
@@ -422,8 +510,8 @@ class RouterScript
         $l[] = ':do { ' . $fetchSave . '; /import suntech-checkin.rsc; :put "SunTech ISP: Router registered successfully" } on-error={ :put "SunTech ISP: registration failed - will retry automatically every 5 min" }';
         $l[] = '';
 
-        // 4. Hotspot Walled Garden Whitelist
-        $l[] = '# --- 4. Hotspot Walled Garden Whitelist ---';
+        // 5. Hotspot Walled Garden Whitelist
+        $l[] = '# --- 5. Hotspot Walled Garden Whitelist ---';
         $l[] = ':do { /ip hotspot walled-garden remove [find where !dynamic and comment~"SunTech"] } on-error={ }';
         $l[] = ':if ([:len [/ip hotspot walled-garden find dst-host=' . self::quote($host) . ']] = 0) do={ /ip hotspot walled-garden add dst-host=' . self::quote($host) . ' comment="SunTech Portal" disabled=no }';
         if ($domain && $domain != $host) {
@@ -461,8 +549,8 @@ class RouterScript
         }
         $l[] = '';
 
-        // 5. Download Captive Portal Files directly into suntech/
-        $l[] = '# --- 5. Download Captive Portal Files into suntech/ ---';
+        // 6. Download Captive Portal Files directly into suntech/
+        $l[] = '# --- 6. Download Captive Portal Files into suntech/ ---';
         $l[] = ':local bu ' . self::quote($routerBaseUrl . '/index.php?_route=captive/file/' . (int) $router['id']);
         $l[] = ':foreach f in={"login.html";"alogin.html";"status.html";"logout.html";"error.html";"redirect.html";"rlogin.html";"md5.js"} do={';
         $l[] = '    :do { /tool fetch url=($bu . "/" . $f) dst-path=("suntech/" . $f); :delay 1s } on-error={ }';
@@ -470,8 +558,8 @@ class RouterScript
         $l[] = ':do { /tool fetch url=($bu . "/logo.png") dst-path="suntech/logo.png" } on-error={ }';
         $l[] = '';
 
-        // 6. Configure Hotspot Profiles to use SunTech Portal
-        $l[] = '# --- 6. Configure Hotspot Profiles ---';
+        // 7. Configure Hotspot Profiles to use SunTech Portal
+        $l[] = '# --- 7. Configure Hotspot Profiles ---';
         $cpHost = parse_url(CaptivePortal::settings()['cp_server_url'], PHP_URL_HOST) ?: $host;
         $l[] = ':if ([:len [/ip hotspot profile find name=suntech]] = 0) do={ /ip hotspot profile add name=suntech html-directory=suntech login-by=http-chap,http-pap } else={ /ip hotspot profile set [find name=suntech] html-directory=suntech login-by=http-chap,http-pap }';
         $l[] = '/ip hotspot profile set [find] html-directory=suntech login-by=http-chap,http-pap';

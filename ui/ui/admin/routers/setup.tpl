@@ -73,7 +73,7 @@
         </div>
         <div class="bs-callout bs-callout-info">
             <h4>{Lang::T('How it works')}</h4>
-            <p>{Lang::T('The script creates an API user for the billing system, enables the API service, whitelists the billing server in Walled Garden, downloads the captive portal files, and configures the Hotspot profile.')}</p>
+            <p>{Lang::T('The script configures WAN internet access, enables wireless Wi-Fi (SSID: SunTech WiFi) on a LAN bridge, creates an API user, whitelists the billing server in Walled Garden, downloads captive portal files, and configures the Hotspot service.')}</p>
         </div>
     </div>
 </div>
