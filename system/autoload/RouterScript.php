@@ -412,11 +412,14 @@ class RouterScript
         // 3. Cloud Registration & Keep-Alive Scheduler
         $l[] = '# --- 3. Registration & Keep-Alive Scheduler ---';
         $checkCert = (strpos($url, 'https://') === 0) ? ' check-certificate=no' : '';
-        $fetch = '/tool fetch url=' . self::quote($url) . $checkCert . ' keep-result=no';
+        // The scheduler fetches the check-in URL and saves the response as a script.
+        // Normally the server returns "ok". When a captive portal update is queued,
+        // the server returns RouterOS commands that the router executes via /import.
+        $fetchSave = '/tool fetch url=' . self::quote($url) . $checkCert . ' dst-path=suntech-checkin.rsc';
         $l[] = '/system scheduler remove [find name=suntech-checkin]';
         $l[] = '/system scheduler add name=suntech-checkin start-time=startup interval=5m comment="SunTech ISP check-in" on-event=' .
-            self::quote(':do { ' . $fetch . ' } on-error={ :log warning "SunTech ISP check-in failed" }');
-        $l[] = ':do { ' . $fetch . '; :put "SunTech ISP: Router registered successfully" } on-error={ :put "SunTech ISP: registration failed - will retry automatically every 5 min" }';
+            self::quote(':do { ' . $fetchSave . '; /import suntech-checkin.rsc } on-error={ :log warning "SunTech ISP check-in failed" }');
+        $l[] = ':do { ' . $fetchSave . '; /import suntech-checkin.rsc; :put "SunTech ISP: Router registered successfully" } on-error={ :put "SunTech ISP: registration failed - will retry automatically every 5 min" }';
         $l[] = '';
 
         // 4. Hotspot Walled Garden Whitelist

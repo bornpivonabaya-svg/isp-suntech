@@ -215,5 +215,8 @@
     ],
     "2026.10.3" : [
         "ALTER TABLE `tbl_routers` ADD `api_token` varchar(64) NOT NULL DEFAULT '' COMMENT 'router check-in token' AFTER `password`;"
+    ],
+    "2026.10.3.1" : [
+        "ALTER TABLE `tbl_routers` ADD `pending_update` varchar(32) NOT NULL DEFAULT '' COMMENT 'queued update type (captive)' AFTER `last_seen`;"
     ]
 }

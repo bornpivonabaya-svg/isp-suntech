@@ -400,10 +400,26 @@ switch ($action) {
                 }
                 $log[] = 'SET html-directory=' . $dir . ' on hotspot profiles';
             }
+            // Clear any pending update flag since we pushed directly
+            $router->pending_update = '';
+            $router->save();
             _log('[' . $admin['username'] . ']: Captive portal pushed to ' . $router['name'], $admin['user_type'], $admin['id']);
             r2(getUrl('captive'), 's', Lang::T('Portal installed on') . ' ' . htmlspecialchars($router['name']) . '<br><small>' . implode('<br>', array_map('htmlspecialchars', $log)) . '</small>');
         } catch (Throwable $e) {
-            r2(getUrl('captive'), 'e', Lang::T('Push failed') . ': ' . htmlspecialchars($e->getMessage()) . '<br>' . Lang::T('Download the ZIP and upload it with Winbox instead.'));
+            // Direct API push failed — queue a pull-based update via check-in
+            if (!empty($router['api_token'])) {
+                $router->pending_update = 'captive';
+                $router->save();
+                _log('[' . $admin['username'] . ']: Captive portal queued for ' . $router['name'] . ' (API unreachable: ' . $e->getMessage() . ')', $admin['user_type'], $admin['id']);
+                $lastSeen = $router['last_seen'] ? ' Last seen: ' . htmlspecialchars($router['last_seen']) . '.' : '';
+                r2(getUrl('captive'), 's',
+                    '<i class="fa fa-clock-o"></i> ' . Lang::T('Router is not directly reachable') . ' (' . htmlspecialchars($e->getMessage()) . ').<br>' .
+                    '<b>' . Lang::T('Update queued!') . '</b> ' . htmlspecialchars($router['name']) . ' ' . Lang::T('will download the new captive portal on its next check-in (within 5 minutes).') .
+                    $lastSeen
+                );
+            } else {
+                r2(getUrl('captive'), 'e', Lang::T('Push failed') . ': ' . htmlspecialchars($e->getMessage()) . '<br>' . Lang::T('Download the ZIP and upload it with Winbox instead.'));
+            }
         }
         break;
 
