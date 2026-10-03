@@ -314,8 +314,41 @@ class RouterScript
     }
 
     /**
-     * Script pasted once on the Mikrotik: creates the API user, enables the API
-     * and schedules a check-in so the billing system learns the router IP.
+     * Helper: wrap a firewall add with place-before in a try/fallback so it
+     * still works on routers that have empty chains (no rule at that position).
+     */
+    private static function fwAddSafe($menu, $args, $position = null)
+    {
+        $base = ':if ([:len [' . $menu . ' find ' . self::fwFindComment($args) . ']] = 0) do={ ';
+        $addCmd = $menu . ' add ' . $args;
+        if ($position !== null) {
+            // Try with place-before first; if the position doesn't exist, add without it
+            return $base . ':do { ' . $addCmd . ' place-before=' . (int) $position . ' } on-error={ ' . $addCmd . ' } }';
+        }
+        return $base . $addCmd . ' }';
+    }
+
+    /**
+     * Extract the comment="..." for use in the find clause.
+     */
+    private static function fwFindComment($args)
+    {
+        if (preg_match('~comment="([^"]*)"~', $args, $m)) {
+            return 'comment="' . $m[1] . '"';
+        }
+        if (preg_match('~comment=(\S+)~', $args, $m)) {
+            return 'comment=' . $m[1];
+        }
+        return '';
+    }
+
+    /**
+     * Script pasted once on the Mikrotik: creates the API user, enables the API,
+     * sets up WAN internet access, and schedules a check-in so the billing
+     * system learns the router IP.
+     *
+     * Designed to work on completely fresh/reset routers with empty firewall
+     * chains. All place-before operations have safe fallbacks.
      */
     public static function routerSetupScript($router, $serverUrl)
     {
@@ -348,13 +381,32 @@ class RouterScript
             $l[] = '# using existing router user "' . $router['username'] . '" saved in the billing system';
         }
         $l[] = '/ip service set api disabled=no port=' . $port;
+        // Allow billing server through the firewall (try to place first, fallback to append)
         $l[] = ':if ([:len [/ip firewall filter find comment="SunTech ISP API"]] = 0) do={ :do { /ip firewall filter add chain=input action=accept protocol=tcp dst-port=' . $port . ' src-address=62.171.144.87 comment="SunTech ISP API" place-before=1 } on-error={ /ip firewall filter add chain=input action=accept protocol=tcp dst-port=' . $port . ' src-address=62.171.144.87 comment="SunTech ISP API" } }';
         $l[] = '';
 
-        // 2. WAN DHCP Client & DNS
-        $l[] = '# --- 2. WAN DHCP Client & DNS ---';
-        $l[] = ':if ([:len [/ip dhcp-client find interface=ether1]] = 0) do={ /ip dhcp-client add interface=ether1 disabled=no } else={ /ip dhcp-client set [find interface=ether1] disabled=no }';
+        // 2. WAN Internet Setup (DHCP Client + NAT Masquerade + DNS)
+        $l[] = '# --- 2. WAN Internet Setup ---';
+        // Interface lists for proper WAN/LAN classification
+        $l[] = ':do { /interface list add name=WAN comment="SunTech WAN" } on-error={ }';
+        $l[] = ':do { /interface list add name=LAN comment="SunTech LAN" } on-error={ }';
+        $l[] = ':if ([:len [/interface list member find interface=ether1 list=WAN]] = 0) do={ :do { /interface list member add interface=ether1 list=WAN comment="SunTech WAN" } on-error={ } }';
+        $l[] = '';
+        // DHCP client on ether1 for WAN
+        $l[] = ':if ([:len [/ip dhcp-client find interface=ether1]] = 0) do={ /ip dhcp-client add interface=ether1 disabled=no add-default-route=yes use-peer-dns=no use-peer-ntp=no comment="SunTech WAN" } else={ /ip dhcp-client set [find interface=ether1] disabled=no add-default-route=yes }';
+        // NAT masquerade so LAN clients can reach the internet
+        $l[] = ':if ([:len [/ip firewall nat find comment="SunTech Masquerade"]] = 0) do={ /ip firewall nat add chain=srcnat out-interface=ether1 action=masquerade comment="SunTech Masquerade" }';
+        // DNS
         $l[] = '/ip dns set servers=8.8.8.8,1.1.1.1 allow-remote-requests=yes';
+        // Basic input protection: drop invalid, accept established/related
+        $l[] = ':if ([:len [/ip firewall filter find comment="SunTech Accept Established"]] = 0) do={ :do { /ip firewall filter add chain=input connection-state=established,related action=accept comment="SunTech Accept Established" place-before=0 } on-error={ /ip firewall filter add chain=input connection-state=established,related action=accept comment="SunTech Accept Established" } }';
+        $l[] = ':if ([:len [/ip firewall filter find comment="SunTech Drop Invalid"]] = 0) do={ /ip firewall filter add chain=input connection-state=invalid action=drop comment="SunTech Drop Invalid" }';
+        $l[] = '';
+        // Wait for DHCP lease before attempting check-in
+        $l[] = '# Wait for WAN to get an IP (up to 15 seconds)';
+        $l[] = ':local wanReady false';
+        $l[] = ':for i from=1 to=15 do={ :if ([/ip dhcp-client get [find interface=ether1] status] = "bound") do={ :set wanReady true } ; :if (!$wanReady) do={ :delay 1s } }';
+        $l[] = ':if ($wanReady) do={ :put "SunTech ISP: WAN is online" } else={ :put "SunTech ISP: WAN not ready yet - check-in will retry via scheduler" }';
         $l[] = '';
 
         // 3. Cloud Registration & Keep-Alive Scheduler
@@ -364,7 +416,7 @@ class RouterScript
         $l[] = '/system scheduler remove [find name=suntech-checkin]';
         $l[] = '/system scheduler add name=suntech-checkin start-time=startup interval=5m comment="SunTech ISP check-in" on-event=' .
             self::quote(':do { ' . $fetch . ' } on-error={ :log warning "SunTech ISP check-in failed" }');
-        $l[] = ':do { ' . $fetch . '; :put "SunTech ISP: Router registered successfully" } on-error={ :put "SunTech ISP: registration failed - check internet" }';
+        $l[] = ':do { ' . $fetch . '; :put "SunTech ISP: Router registered successfully" } on-error={ :put "SunTech ISP: registration failed - will retry automatically every 5 min" }';
         $l[] = '';
 
         // 4. Hotspot Walled Garden Whitelist
@@ -385,22 +437,23 @@ class RouterScript
         $cp = CaptivePortal::settings();
         if ($cp['cp_block_dns_tunnel'] == 'yes') {
             $l[] = '# --- Force Local DNS & Block DNS Tunneling ---';
-            $l[] = ':if ([:len [/ip firewall nat find comment="Force local DNS"]] = 0) do={ /ip firewall nat add chain=dstnat protocol=udp dst-port=53 action=redirect to-ports=53 comment="Force local DNS" place-before=1 }';
-            $l[] = ':if ([:len [/ip firewall nat find comment="Force local DNS (TCP)"]] = 0) do={ /ip firewall nat add chain=dstnat protocol=tcp dst-port=53 action=redirect to-ports=53 comment="Force local DNS (TCP)" place-before=2 }';
+            // Try place-before for priority; fallback to append if chain is empty
+            $l[] = ':if ([:len [/ip firewall nat find comment="Force local DNS"]] = 0) do={ :do { /ip firewall nat add chain=dstnat protocol=udp dst-port=53 action=redirect to-ports=53 comment="Force local DNS" place-before=0 } on-error={ /ip firewall nat add chain=dstnat protocol=udp dst-port=53 action=redirect to-ports=53 comment="Force local DNS" } }';
+            $l[] = ':if ([:len [/ip firewall nat find comment="Force local DNS (TCP)"]] = 0) do={ :do { /ip firewall nat add chain=dstnat protocol=tcp dst-port=53 action=redirect to-ports=53 comment="Force local DNS (TCP)" place-before=0 } on-error={ /ip firewall nat add chain=dstnat protocol=tcp dst-port=53 action=redirect to-ports=53 comment="Force local DNS (TCP)" } }';
         }
         if ($cp['cp_block_vpn'] == 'yes' || $cp['cp_block_protocols'] == 'yes') {
             $l[] = '# --- Block Unauthorized VPN & Bypass Protocols ---';
             if ($cp['cp_block_dns_tunnel'] == 'yes') {
-                $l[] = ':if ([:len [/ip firewall filter find comment="Block unauthorized external DNS"]] = 0) do={ /ip firewall filter add chain=forward protocol=udp dst-port=53 hotspot=from-client,!auth action=drop comment="Block unauthorized external DNS" place-before=2 }';
+                $l[] = ':if ([:len [/ip firewall filter find comment="Block unauthorized external DNS"]] = 0) do={ /ip firewall filter add chain=forward protocol=udp dst-port=53 hotspot=from-client,!auth action=drop comment="Block unauthorized external DNS" }';
             }
             if ($cp['cp_block_protocols'] == 'yes') {
-                $l[] = ':if ([:len [/ip firewall filter find comment="Drop unauthenticated UDP VPN tunnels"]] = 0) do={ /ip firewall filter add chain=forward protocol=udp dst-port=!67,68 hotspot=from-client,!auth action=drop comment="Drop unauthenticated UDP VPN tunnels" place-before=3 }';
-                $l[] = ':if ([:len [/ip firewall filter find comment="Block GRE"]] = 0) do={ /ip firewall filter add chain=forward protocol=gre hotspot=from-client,!auth action=drop comment="Block GRE" place-before=4 }';
+                $l[] = ':if ([:len [/ip firewall filter find comment="Drop unauthenticated UDP VPN tunnels"]] = 0) do={ /ip firewall filter add chain=forward protocol=udp dst-port=!67,68 hotspot=from-client,!auth action=drop comment="Drop unauthenticated UDP VPN tunnels" }';
+                $l[] = ':if ([:len [/ip firewall filter find comment="Block GRE"]] = 0) do={ /ip firewall filter add chain=forward protocol=gre hotspot=from-client,!auth action=drop comment="Block GRE" }';
             }
             if ($cp['cp_block_vpn'] == 'yes') {
-                $l[] = ':if ([:len [/ip firewall filter find comment="Block IPsec"]] = 0) do={ /ip firewall filter add chain=forward protocol=ipsec-esp hotspot=from-client,!auth action=drop comment="Block IPsec" place-before=5 }';
-                $l[] = ':if ([:len [/ip firewall filter find comment="Block standard VPN ports"]] = 0) do={ /ip firewall filter add chain=forward protocol=udp dst-port=500,4500,1194,51820 hotspot=from-client,!auth action=drop comment="Block standard VPN ports" place-before=6 }';
-                $l[] = ':if ([:len [/ip firewall filter find comment="Block OpenVPN & PPTP"]] = 0) do={ /ip firewall filter add chain=forward protocol=tcp dst-port=1194,1723 hotspot=from-client,!auth action=drop comment="Block OpenVPN & PPTP" place-before=7 }';
+                $l[] = ':if ([:len [/ip firewall filter find comment="Block IPsec"]] = 0) do={ /ip firewall filter add chain=forward protocol=ipsec-esp hotspot=from-client,!auth action=drop comment="Block IPsec" }';
+                $l[] = ':if ([:len [/ip firewall filter find comment="Block standard VPN ports"]] = 0) do={ /ip firewall filter add chain=forward protocol=udp dst-port=500,4500,1194,51820 hotspot=from-client,!auth action=drop comment="Block standard VPN ports" }';
+                $l[] = ':if ([:len [/ip firewall filter find comment="Block OpenVPN & PPTP"]] = 0) do={ /ip firewall filter add chain=forward protocol=tcp dst-port=1194,1723 hotspot=from-client,!auth action=drop comment="Block OpenVPN & PPTP" }';
             }
         }
         $l[] = '';
